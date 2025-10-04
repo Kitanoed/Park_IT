@@ -10,10 +10,6 @@ def signin_student(request: HttpRequest) -> HttpResponse:
     return render(request, 'signin_student.html')
 
 
-def signin_teacher(request: HttpRequest) -> HttpResponse:
-    return render(request, 'signin_teacher.html')
-
-
 def signin_admin(request: HttpRequest) -> HttpResponse:
     return render(request, 'signin_admin.html')
 
