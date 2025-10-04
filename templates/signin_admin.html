@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="login-card">
+  <!-- Logo and Header -->
+  <div class="logo-header">
+    <img src="{% static 'images/cit.png' %}" alt="CIT-U Logo">
+    <div class="logo-header-text">
+      <div class="university-name">Cebu Institute of Technology - University</div>
+      <div class="online-badge">Online</div>
+    </div>
+  </div>
+
+  <div class="text-center">
+    <h3 class="welcome-title">Welcome to <span style="color:#b71c1c;">Park<span style="color:#ffb400;">IT!</span></span></h3>
+    <p class="welcome-subtitle">It is our great pleasure to have you on board!</p>
+  </div>
+
+  <!-- Login Form -->
+  <form method="POST">
+    {% csrf_token %}
+    <div class="form-floating">
+      <input type="text" class="form-control" id="adminId" name="adminId" placeholder="Admin ID" required>
+      <label for="adminId">Enter Admin ID</label>
+    </div>
+    <div class="form-floating">
+      <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+      <label for="password">Enter Password</label>
+    </div>
+    <button type="submit" class="btn btn-signin w-100">Sign In</button>
+  </form>
+</div>
+{% endblock %}
+
