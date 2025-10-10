@@ -1,165 +1,172 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Parking Manager - Admin Dashboard</title>
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: #222;
-        }
-        .container {
-            display: flex;
-            height: 100vh;
-        }
-        .sidebar {
-            width: 220px;
-            background: #fff;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            padding: 0 0 20px 0;
-            position: relative;
-        }
-        .sidebar-header {
-            width: 100%;
-            padding: 20px 20px 10px 20px;
-            box-sizing: border-box;
-        }
-        .logo-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .dot {
-            height: 12px;
-            width: 12px;
-            border-radius: 50%;
-            display: inline-block;
-        }
-        .dot.red { background: #ee5253; }
-        .dot.yellow { background: #feca57; }
-        .dot.green { background: #1dd1a1; }
-        .sidebar-title {
-            margin: 25px 0 0 15px;
-        }
-        .sidebar-title span {
-            font-size: 28px;
-            font-weight: bold;
-            color: #de911d;
-        }
-        .sidebar-title p {
-            margin: 0;
-            font-size: 18px;
-            font-weight: bold;
-            color: #222;
-        }
-        .nav {
-            width: 100%;
-            margin-top: 40px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        .nav-btn {
-            width: 90%;
-            margin-left: 10px;
-            display: flex;
-            align-items: center;
-            padding: 13px 15px;
-            background: linear-gradient(90deg, #c0392b, #ffc300);
-            color: #fff;
-            font-size: 18px;
-            font-weight: 500;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            gap: 12px;
-        }
-        .nav-btn.inactive {
-            background: none;
-            color: #222;
-            font-weight: 400;
-            box-shadow: none;
-        }
-        .nav-btn .icon {
-            font-size: 21px;
-        }
-        .sidebar-footer {
-            position: absolute;
-            bottom: 18px;
-            left: 20px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .avatar {
-            background: #e0e0e0;
-            border-radius: 50%;
-            width: 42px;
-            height: 42px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .admin-details span {
-            font-size: 15px;
-            font-weight: bold;
-            display: block;
-            color: #222;
-        }
-        .admin-details small {
-            color: #777;
-            font-size: 13px;
-        }
-        .main-content {
-            flex: 1;
-            background: #fff;
-            border-radius: 0 10px 10px 0;
-        }
-    </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Parking Manager — Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"/>
+  <style>
+    :root{
+      --bg:#f6f7fb;--text:#1f2937;--muted:#6b7280;--brand:#de911d;--accent:#c0392b;--accent2:#ffc300;
+      --card:#ffffff;--ok:#16a34a;--warn:#f59e0b;--ring:0 8px 26px rgba(0,0,0,.08);
+    }
+    *{box-sizing:border-box} html,body{height:100%}
+    body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,#222 0%, #2a2a2a 100%);color:var(--text)}
+    .shell{display:flex;min-height:100vh;padding:18px;gap:18px}
+
+    .sidebar{width:260px;min-width:260px;background:var(--card);border-radius:14px;padding:18px 16px 16px;box-shadow:var(--ring);display:flex;flex-direction:column;position:relative}
+    .mac-dots{display:flex;gap:8px;align-items:center}
+    .dot{width:12px;height:12px;border-radius:999px}
+    .dot.red{background:#ee5253}.dot.yellow{background:#feca57}.dot.green{background:#1dd1a1}
+    .brand{margin:14px 2px 8px;line-height:1.05}
+    .brand .top{font-size:28px;font-weight:800;color:var(--brand)}
+    .brand .bottom{font-size:18px;font-weight:800;color:#222;margin-top:2px}
+    .nav{margin-top:24px;display:flex;flex-direction:column;gap:10px}
+    .nav button{display:flex;align-items:center;gap:12px;border:none;border-radius:10px;padding:12px 14px;font-size:15px;background:transparent;color:#111;cursor:pointer;transition:.2s ease}
+    .nav button.active{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#fff;font-weight:600;box-shadow:0 8px 18px rgba(192,57,43,.25)}
+    .nav button:hover:not(.active){background:#f3f4f6}
+    .sidebar .spacer{flex:1}
+    .admin{display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;background:#f8fafc}
+    .avatar{width:42px;height:42px;border-radius:999px;background:#e5e7eb}
+    .admin .name{font-weight:700;font-size:14px}.admin .email{font-size:12px;color:var(--muted)}
+
+    .main{flex:1;background:var(--card);border-radius:14px;box-shadow:var(--ring);padding:18px;display:flex;flex-direction:column;gap:18px}
+    .header{display:flex;align-items:center;justify-content:space-between;gap:16px}
+    .title{height:0} /* no title */
+    .toolbar{display:none} /* removed Refresh and Export */
+
+    .grid{display:grid;gap:16px;grid-template-columns:repeat(12,1fr)}
+    .card{background:#fff;border:1px solid #eef0f4;border-radius:12px;padding:14px;box-shadow:0 1px 0 rgba(0,0,0,.02)}
+    .kpi{display:flex;align-items:center;justify-content:space-between}
+    .kpi .value{font-size:34px;font-weight:900}
+    .kpi .label{color:var(--muted);font-size:13px}
+    .bar{height:8px;background:#eef2f7;border-radius:999px;overflow:hidden}
+    .bar > span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#06b6d4,#22c55e)}
+    .list{display:flex;flex-direction:column;gap:10px}
+    .row{display:flex;align-items:center;gap:10px}
+    .row .tag{min-width:56px;font-size:12px;font-weight:700;color:#111}
+    .row .pct{min-width:36px;text-align:right;font-weight:700;font-size:12px}
+    .row .barline{flex:1;height:8px;background:#eef2f7;border-radius:999px;overflow:hidden}
+    .row .barline > span{display:block;height:100%;background:linear-gradient(90deg,#ef4444,#22c55e)}
+
+    .shot{width:100%;border-radius:12px;overflow:hidden;border:1px solid #eaecef;background:#f8f9fb}
+    .shot img{width:100%;height:auto;display:block}
+    .caption{font-size:12px;color:var(--muted);text-align:center;margin-top:8px}
+
+    @media (max-width:1100px){
+      .sidebar{display:none}.shell{padding:12px}.main{padding:14px}.grid{grid-template-columns:repeat(6,1fr)}
+    }
+    @media (max-width:720px){
+      .grid{grid-template-columns:repeat(1,1fr)} .kpi .value{font-size:28px}
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo-row">
-                    <span class="dot red"></span>
-                    <span class="dot yellow"></span>
-                    <span class="dot green"></span>
-                </div>
-                <div class="sidebar-title">
-                    <span>Parking</span><br>
-                    <p>Manager</p>
-                </div>
-            </div>
-            <div class="nav">
-                <button class="nav-btn">
-                    <span class="icon"><i class="fa fa-th-large"></i></span>
-                    Dashboard
-                </button>
-                <button class="nav-btn inactive">
-                    <span class="icon"><i class="fa fa-car"></i></span>
-                    Parking Spaces
-                </button>
-                <button class="nav-btn inactive">
-                    <span class="icon"><i class="fa fa-users"></i></span>
-                    Manage Users
-                </button>
-            </div>
-            <div class="sidebar-footer">
-                <div class="avatar"></div>
-                <div class="admin-details">
-                    <span>Admin Name</span>
-                    <small>admin email</small>
-                </div>
-            </div>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="mac-dots">
+        <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+      </div>
+      <div class="brand">
+        <div class="top">Parking</div>
+        <div class="bottom">Manager</div>
+      </div>
+      <nav class="nav">
+        <button class="active"><i class="fa fa-th-large"></i><span>Dashboard</span></button>
+        <button><i class="fa fa-car"></i><span>Parking Spaces</span></button>
+        <button><i class="fa fa-users"></i><span>Manage Users</span></button>
+        <button><i class="fa fa-gear"></i><span>Settings</span></button>
+      </nav>
+      <div class="spacer"></div>
+      <div class="admin">
+        <div class="avatar"></div>
+        <div>
+          <div class="name">Admin Name</div>
+          <div class="email">admin@email.com</div>
         </div>
-        <div class="main-content">
-            <!-- Main dashboard content goes here -->
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="header">
+        <div class="title"></div>
+        <div class="toolbar"></div>
+      </div>
+
+      <section class="grid">
+        <div class="card" style="grid-column: span 3;">
+          <div class="kpi">
+            <div>
+              <div class="label">Total Entries (Today)</div>
+              <div class="value">253</div>
+            </div>
+            <i class="fa fa-sign-in-alt" style="color:var(--ok);font-size:24px"></i>
+          </div>
+          <div class="bar" style="margin-top:10px"><span style="width:72%"></span></div>
         </div>
-    </div>
+
+        <div class="card" style="grid-column: span 3;">
+          <div class="kpi">
+            <div>
+              <div class="label">Total Exits (Today)</div>
+              <div class="value">158</div>
+            </div>
+            <i class="fa fa-sign-out-alt" style="color:var(--warn);font-size:24px"></i>
+          </div>
+          <div class="bar" style="margin-top:10px"><span style="width:46%;background:linear-gradient(90deg,#f97316,#fde047)"></span></div>
+        </div>
+
+        <div class="card" style="grid-column: span 6;">
+          <div class="kpi" style="margin-bottom:10px">
+            <div>
+              <div class="label">Total Current Occupancy</div>
+              <div class="value">90%</div>
+            </div>
+            <i class="fa fa-square-parking" style="color:#2563eb;font-size:26px"></i>
+          </div>
+          <div class="list">
+            <div class="row"><div class="tag">NGE</div><div class="barline"><span style="width:90%"></span></div><div class="pct">90%</div></div>
+            <div class="row"><div class="tag">ACAD</div><div class="barline"><span style="width:78%"></span></div><div class="pct">78%</div></div>
+            <div class="row"><div class="tag">BC</div><div class="barline"><span style="width:66%"></span></div><div class="pct">66%</div></div>
+            <div class="row"><div class="tag">GYM</div><div class="barline"><span style="width:82%"></span></div><div class="pct">82%</div></div>
+            <div class="row"><div class="tag">RTL</div><div class="barline"><span style="width:58%"></span></div><div class="pct">58%</div></div>
+            <div class="row"><div class="tag">BG</div><div class="barline"><span style="width:60%"></span></div><div class="pct">60%</div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid">
+        <div class="card" style="grid-column: span 4;">
+          <div class="kpi" style="margin-bottom:10px">
+            <div class="label">Parking Lot Status</div>
+            <i class="fa fa-chart-bar" style="color:#9333ea"></i>
+          </div>
+          <div class="list">
+            <div class="row"><div class="tag">NGE</div><div class="barline"><span style="width:72%"></span></div><div class="pct">72</div></div>
+            <div class="row"><div class="tag">ACAD</div><div class="barline"><span style="width:71%"></span></div><div class="pct">71</div></div>
+            <div class="row"><div class="tag">BC</div><div class="barline"><span style="width:62%"></span></div><div class="pct">62</div></div>
+            <div class="row"><div class="tag">GYM</div><div class="barline"><span style="width:77%"></span></div><div class="pct">77</div></div>
+            <div class="row"><div class="tag">RTL</div><div class="barline"><span style="width:55%"></span></div><div class="pct">55</div></div>
+            <div class="row"><div class="tag">BG</div><div class="barline"><span style="width:73%"></span></div><div class="pct">73</div></div>
+          </div>
+        </div>
+
+        <div class="card" style="grid-column: span 8;">
+          <div class="label" style="margin:2px 0 10px;color:var(--muted)">Dashboard Preview</div>
+          <div class="shot">
+            <img src="Screenshot-2025-10-11-003344.jpg" alt="Admin dashboard screenshot"/>
+          </div>
+          <div class="caption">Weekly peak traffic visualization and KPIs embedded as an image.</div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="label" style="margin-bottom:10px;color:var(--muted)">Peak Parking Times (Weekly)</div>
+        <div class="shot" style="max-width:980px;margin:0 auto">
+          <img src="Screenshot-2025-10-11-003353.jpg" alt="Bar chart preview"/>
+        </div>
+      </section>
+    </main>
+  </div>
 </body>
 </html>
