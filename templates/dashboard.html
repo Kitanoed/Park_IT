@@ -32,8 +32,8 @@
 
     .main{flex:1;background:var(--card);border-radius:14px;box-shadow:var(--ring);padding:18px;display:flex;flex-direction:column;gap:18px}
     .header{display:flex;align-items:center;justify-content:space-between;gap:16px}
-    .title{height:0} /* no title */
-    .toolbar{display:none} /* removed Refresh and Export */
+    .title{height:0}
+    .toolbar{display:none}
 
     .grid{display:grid;gap:16px;grid-template-columns:repeat(12,1fr)}
     .card{background:#fff;border:1px solid #eef0f4;border-radius:12px;padding:14px;box-shadow:0 1px 0 rgba(0,0,0,.02)}
@@ -75,7 +75,7 @@
         <button class="active"><i class="fa fa-th-large"></i><span>Dashboard</span></button>
         <button><i class="fa fa-car"></i><span>Parking Spaces</span></button>
         <button><i class="fa fa-users"></i><span>Manage Users</span></button>
-        <button><i class="fa fa-gear"></i><span>Settings</span></button>
+        <!-- Settings button removed -->
       </nav>
       <div class="spacer"></div>
       <div class="admin">
