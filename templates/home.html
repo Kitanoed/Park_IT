@@ -58,23 +58,6 @@
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(183, 28, 28, 0.15);
     }
-    .divider {
-      display: flex;
-      align-items: center;
-      text-align: center;
-      margin: 24px 0;
-      color: #9ca3af;
-      font-size: 0.875rem;
-    }
-    .divider::before,
-    .divider::after {
-      content: '';
-      flex: 1;
-      border-bottom: 1px solid #e0e0e0;
-    }
-    .divider span {
-      padding: 0 16px;
-    }
     @media (max-width: 576px) {
       .auth-buttons {
         flex-direction: column;
@@ -90,28 +73,6 @@
     <a href="{% url 'register' %}" class="btn-auth secondary">
       <span>✨</span>
       <span>Create Account</span>
-    </a>
-  </div>
-
-  <div class="divider">
-    <span>or choose your portal</span>
-  </div>
-
-  <div>
-    <a href="{% url 'signin_student' %}" class="btn-portal">
-      <div class="d-flex align-items-center">
-        <div class="portal-icon">🎓</div>
-        <span>Academic Portal</span>
-      </div>
-      <span class="arrow-icon">→</span>
-    </a>
-
-    <a href="{% url 'signin_admin' %}" class="btn-portal">
-      <div class="d-flex align-items-center">
-        <div class="portal-icon">🏛️</div>
-        <span>Administrative Portal</span>
-      </div>
-      <span class="arrow-icon">→</span>
     </a>
   </div>
 </div>
