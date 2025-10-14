@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="login-card">
+  <div class="logo-header">
+    <img src="{% static 'images/cit.png' %}" alt="CIT-U Logo">
+    <div class="logo-header-text">
+      <div class="university-name">Cebu Institute of Technology - University</div>
+      <div class="online-badge">Online</div>
+    </div>
+  </div>
+
+  <div class="text-center">
+    <h3 class="welcome-title">Welcome to <span style="color:#b71c1c;">Park<span style="color:#ffb400;">IT!</span></span></h3>
+    <p class="welcome-subtitle">It is our great pleasure to have you on board!</p>
+  </div>
+
+  <style>
+    .auth-buttons {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .btn-auth {
+      flex: 1;
+      padding: 14px 24px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: none;
+    }
+    .btn-auth.primary {
+      background: linear-gradient(135deg, #b71c1c 0%, #f57c00 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(183, 28, 28, 0.3);
+    }
+    .btn-auth.primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(183, 28, 28, 0.4);
+      color: white;
+    }
+    .btn-auth.secondary {
+      background: white;
+      color: #333;
+      border: 2px solid #e0e0e0;
+    }
+    .btn-auth.secondary:hover {
+      background: #f8f9fa;
+      border-color: #b71c1c;
+      color: #b71c1c;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(183, 28, 28, 0.15);
+    }
+    .divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      margin: 24px 0;
+      color: #9ca3af;
+      font-size: 0.875rem;
+    }
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .divider span {
+      padding: 0 16px;
+    }
+    @media (max-width: 576px) {
+      .auth-buttons {
+        flex-direction: column;
+      }
+    }
+  </style>
+
+  <div class="auth-buttons">
+    <a href="{% url 'signIn' %}" class="btn-auth primary">
+      <span>🔑</span>
+      <span>Sign In</span>
+    </a>
+    <a href="{% url 'register' %}" class="btn-auth secondary">
+      <span>✨</span>
+      <span>Create Account</span>
+    </a>
+  </div>
+
+  <div class="divider">
+    <span>or choose your portal</span>
+  </div>
+
+  <div>
+    <a href="{% url 'signin_student' %}" class="btn-portal">
+      <div class="d-flex align-items-center">
+        <div class="portal-icon">🎓</div>
+        <span>Academic Portal</span>
+      </div>
+      <span class="arrow-icon">→</span>
+    </a>
+
+    <a href="{% url 'signin_admin' %}" class="btn-portal">
+      <div class="d-flex align-items-center">
+        <div class="portal-icon">🏛️</div>
+        <span>Administrative Portal</span>
+      </div>
+      <span class="arrow-icon">→</span>
+    </a>
+  </div>
+</div>
+{% endblock %}
