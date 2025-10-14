@@ -3,7 +3,6 @@
 
 {% block content %}
 <div class="login-card">
-
   <div class="logo-header">
     <img src="{% static 'images/cit.png' %}" alt="CIT-U Logo">
     <div class="logo-header-text">
@@ -17,9 +16,8 @@
     <p class="welcome-subtitle">It is our great pleasure to have you on board!</p>
   </div>
 
-
   <div>
-    <a href="{% url 'signin_student' %}" class="btn-portal">
+    <a href="{% url 'signin' portal='student' %}" class="btn-portal">
       <div class="d-flex align-items-center">
         <div class="portal-icon">🎓</div>
         <span>Academic Portal</span>
@@ -27,7 +25,7 @@
       <span class="arrow-icon">→</span>
     </a>
 
-    <a href="{% url 'signin_admin' %}" class="btn-portal">
+    <a href="{% url 'signin' portal='admin' %}" class="btn-portal">
       <div class="d-flex align-items-center">
         <div class="portal-icon">🏛️</div>
         <span>Administrative Portal</span>

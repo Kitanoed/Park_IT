@@ -1,11 +1,10 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load crispy_forms_tags %}
 
 {% block content %}
 <div class="login-card text-center">
-
   <img src="{% static 'images/cit.png' %}" alt="CIT-U Logo" class="mb-3" width="120">
-
 
   <h3 class="mb-2">Welcome to <span style="color:#b71c1c;">Park<span style="color:#ffb400;">IT!</span></span></h3>
   <p class="text-muted mb-4">It is our great pleasure to have you on board!</p>
@@ -13,14 +12,7 @@
   <!-- Form -->
   <form method="POST">
     {% csrf_token %}
-    <div class="form-floating mb-3">
-      <input type="text" class="form-control" id="studentId" name="studentId" placeholder="Student ID">
-      <label for="studentId">Enter ID</label>
-    </div>
-    <div class="form-floating mb-3">
-      <input type="password" class="form-control" id="password" name="password" placeholder="Password">
-      <label for="password">Enter Password</label>
-    </div>
+    {{ form|crispy }}
     <button type="submit" class="btn btn-signin w-100">Sign In</button>
   </form>
 </div>

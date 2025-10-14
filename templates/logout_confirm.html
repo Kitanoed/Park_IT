@@ -56,23 +56,10 @@
     <div class="modal-body">
       <p class="message">Are you sure you want to logout?</p>
       <div class="actions">
-        <button class="btn" id="confirmBtn">Confirm</button>
-        <button class="btn-secondary" id="cancelBtn">Cancel</button>
+        <a href="{% url 'logout' %}" class="btn" id="confirmBtn">Confirm</a>
+        <button class="btn-secondary" id="cancelBtn" onclick="window.history.back()">Cancel</button>
       </div>
     </div>
   </div>
-
-<script>
-  document.getElementById('confirmBtn').addEventListener('click', ()=>{
-    alert('Confirmed logout (front-end only)');
-    // In a real app, redirect to login page or clear auth:
-    // location.href = 'login.html';
-  });
-  document.getElementById('cancelBtn').addEventListener('click', ()=>{
-    // Go back to Account page in a front-end only flow
-    // location.href = 'account.html';
-    window.history.back();
-  });
-</script>
 </body>
 </html>

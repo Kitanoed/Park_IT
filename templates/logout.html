@@ -65,37 +65,34 @@
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="accountTitle">
     <div class="modal-header">
       <div id="accountTitle" class="title">Account</div>
-      <button class="close" aria-label="Close">×</button>
+      <button class="close" aria-label="Close" onclick="window.history.back()">×</button>
     </div>
     <div class="modal-body">
       <div class="field">
         <label class="label" for="fullName">Full Name</label>
-        <input class="input" id="fullName" type="text" value="John Doe" />
+        <input class="input" id="fullName" type="text" value="John Doe" readonly />
       </div>
       <div class="field">
         <label class="label" for="username">Username</label>
-        <input class="input" id="username" type="text" value="jndoe" />
+        <input class="input" id="username" type="text" value="jndoe" readonly />
       </div>
       <div class="field">
         <label class="label" for="password">Password</label>
-        <input class="input" id="password" type="password" value="password" />
+        <input class="input" id="password" type="password" value="password" readonly />
       </div>
       <div class="actions">
-        <button class="btn" id="logoutBtn">Logout</button>
+        <a href="{% url 'logout' %}" class="btn" id="logoutBtn">Logout</a>
       </div>
     </div>
   </div>
 
   <div id="toast" class="toast">Navigate to confirm-logout.html</div>
 
-<script>
-  const toast = document.getElementById('toast');
-  document.getElementById('logoutBtn').addEventListener('click', ()=>{
-    toast.classList.add('show');
-    setTimeout(()=>toast.classList.remove('show'), 1800);
-    // For real navigation, link this button to confirm-logout.html:
-    // location.href = 'confirm-logout.html';
-  });
-</script>
+  <script>
+    const toast = document.getElementById('toast');
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      window.location.href = "{% url 'logout' %}";  // Redirect to logout view
+    });
+  </script>
 </body>
 </html>
