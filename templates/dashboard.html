@@ -1,206 +1,419 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% load static %}
 
-{% block extra_head %}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-<style>
-  :root {
-    --bg: #222;
-    --text: #1f2937;
-    --muted: #6b7280;
-    --brand: #de911d;
-    --accent: #c0392b;
-    --accent2: #ffc300;
-    --card: #ffffff;
-    --ok: #16a34a;
-    --warn: #f59e0b;
-    --ring: 0 8px 26px rgba(0,0,0,.08);
-  }
-  .shell { display: flex; min-height: 72vh; gap: 18px; }
-  .sidebar { width: 260px; min-width: 260px; background: var(--card); border-radius: 14px; padding: 18px 16px; box-shadow: var(--ring); display: flex; flex-direction: column; }
-  .brand { margin: 6px 2px 12px; line-height: 1.05; }
-  .brand .top { font-size: 26px; font-weight: 800; letter-spacing: .2px; }
-  .brand .bot { color: #9aa3af; font-size: 13px; }
-  .nav a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin: 2px 0; color: #1f2937; text-decoration: none; border-radius: 10px; }
-  .nav a.active { background: #f6f7fb; color: #111827; }
-  .nav a .i { width: 28px; height: 28px; border-radius: 8px; background: #f3f4f6; display: inline-flex; align-items: center; justify-content: center; color: #111827; }
-  .content { flex: 1; display: flex; flex-direction: column; gap: 18px; }
-  .row { display: grid; grid-template-columns: repeat(12, 1fr); gap: 18px; }
-  .col-12 { grid-column: span 12; }
-  .col-6 { grid-column: span 6; }
-  .col-4 { grid-column: span 4; }
-  .panel { background: var(--card); border-radius: 14px; box-shadow: var(--ring); padding: 16px; }
-  .panel h3 { margin: 2px 0 10px; font-size: 18px; }
-  .kpis { display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; }
-  .kpi { grid-column: span 3; background: #f8fafc; border-radius: 12px; padding: 14px; }
-  .kpi .label { color: var(--muted); font-size: 12px; }
-  .kpi .value { font-size: 24px; font-weight: 700; margin-top: 4px; }
-  .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 999px; font-size: 12px; }
-  .badge.ok { background: #ecfdf5; color: #065f46; }
-  .badge.warn { background: #fff7ed; color: #9a3412; }
-  .table { width: 100%; border-collapse: collapse; }
-  .table th, .table td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #f0f2f5; font-size: 14px; }
-  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 12px; background: #f3f4f6; color: #111827; }
-  .btn-primary { background: linear-gradient(90deg, #b71c1c, #ffb400); color: #fff; border: none; padding: 10px 14px; border-radius: 10px; font-weight: 600; }
-  @media (max-width: 992px) {
-    .col-6 { grid-column: span 12; }
-    .col-4 { grid-column: span 12; }
-    .kpi { grid-column: span 6; }
-  }
-  @media (max-width: 640px) {
-    .kpi { grid-column: span 12; }
-    .sidebar { display: none; }
-  }
-</style>
-{% endblock %}
+{% block title %}Admin - Dashboard{% endblock %}
 
 {% block content %}
-<div class="container" style="padding: 20px;">
-  <div class="shell">
+<style>
+  :root{
+    --brand-red:#b71c1c;
+    --brand-orange:#f57c00;
+
+    --win-red:#ff5f57;
+    --win-yellow:#ffbd2e;
+    --win-green:#28c840;
+
+    --bar-red:#e53935;
+    --bar-yellow:#ffb400;
+    --bar-green:#2fbf4a;
+
+    --surface:#ffffff;
+    --border:#eef0f3;
+    --text:#111827;
+    --muted:#6b7280;
+    --canvas-bg:#f5f7fa;
+  }
+
+  body{ background:var(--canvas-bg); }
+
+  /* Wide canvas */
+  .dashboard-wrap{
+    width:100%;
+    max-width: 1520px;
+    margin:0 auto;
+    padding:18px 18px 26px;
+  }
+
+  /* Title bar with dots, PARKIT! centered, and Logout on the right */
+  .titlebar{
+    min-height:56px;
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:12px;
+    display:grid;
+    grid-template-columns: 120px 1fr 140px; /* dots | brand | logout */
+    align-items:center;
+    padding: 0 14px;
+    box-shadow:0 1px 2px rgba(0,0,0,.04);
+  }
+  .dots{display:flex;gap:8px;align-items:center}
+  .dot{width:12px;height:12px;border-radius:50%}
+  .dot.red{background:var(--win-red)}
+  .dot.yellow{background:var(--win-yellow)}
+  .dot.green{background:var(--win-green)}
+
+  .brandline{
+    display:flex; align-items:center; justify-content:center;
+  }
+  .park{
+    font-family: Montserrat, sans-serif; font-weight:800; letter-spacing:.2px;
+    font-size:18px; line-height:1;
+  }
+  .park .p1{ color:var(--brand-red); }
+  .park .p2{ color:#ffb400; }
+
+  .logout-wrap{display:flex; justify-content:flex-end;}
+  .logout-btn{
+    height:36px; padding:0 14px; border-radius:10px; border:1px solid transparent;
+    font-weight:700; color:#fff; cursor:pointer;
+    background: linear-gradient(135deg,var(--brand-red) 0%, var(--brand-orange) 100%);
+  }
+  .logout-btn:hover{ filter:brightness(1.05); }
+
+  /* Grid app layout */
+  .app{
+    display:grid;
+    grid-template-columns: 270px 1fr;
+    gap:14px; margin-top:14px;
+    min-height: calc(100vh - 120px);
+  }
+
+  /* Sidebar */
+  .sidebar{
+    background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;
+    display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);
+  }
+  .brand{
+    display:flex;align-items:center;gap:10px;padding-bottom:10px;border-bottom:1px solid var(--border)
+  }
+  .mark{
+    width:40px;height:40px;border-radius:10px;background:#fff5f5;
+    display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--brand-red)
+  }
+  .txt{line-height:1.1}
+  .txt .t1{font-weight:800;color:var(--text)}
+  .txt .t2{font-weight:600;color:var(--muted);font-size:12px}
+
+  .nav{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+  .nav a{
+    display:flex;align-items:center;gap:10px;text-decoration:none;
+    padding:11px 12px;border-radius:12px;border:1px solid var(--border);
+    color:var(--text); background:#fff; transition:.2s;
+  }
+  .nav a:hover{transform:translateY(-1px); border-color:var(--brand-red); color:var(--brand-red)}
+  .nav a.active{
+    background: linear-gradient(135deg,var(--brand-red) 0%, var(--brand-orange) 100%);
+    color:#fff; border-color:transparent;
+  }
+  .ico{
+    width:28px;height:28px;border-radius:8px;background:#f8f9fa;
+    display:flex;align-items:center;justify-content:center;color:#6b7280;font-weight:700;
+  }
+  .spacer{flex:1}
+  .profile{
+    padding:12px;border:1px solid var(--border);border-radius:12px;background:#fff;
+    display:flex;align-items:center;gap:10px;
+  }
+  .avatar{width:30px;height:30px;border-radius:50%;background:#f3f4f6}
+  .nm{font-weight:600;font-size:12px;color:var(--text)}
+  .em{font-size:11px;color:var(--muted)}
+
+  /* Main canvas */
+  .main{
+    background:#fff;border:1px solid var(--border);border-radius:12px;
+    box-shadow:0 1px 2px rgba(0,0,0,.04); padding:14px;
+  }
+
+  /* Cards and grids */
+  .grid-3{display:grid;grid-template-columns: 1.2fr 1fr 1fr; gap:14px}
+  .card{
+    background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;
+    box-shadow:0 1px 1px rgba(0,0,0,.02);
+  }
+  .card h4{margin:0 0 8px;font-size:14px;font-weight:700;color:var(--text)}
+  .sub{color:var(--muted);font-size:12px;margin-bottom:6px}
+  .metric .big{font-size:64px;font-weight:800;color:var(--text);line-height:1}
+
+  .status-row{display:grid;grid-template-columns: 42px 1fr 48px; align-items:center; gap:8px; margin:8px 0;}
+  .lot-name{font-weight:600;color:var(--text);font-size:12px}
+  .percent{font-weight:700;color:var(--muted);font-size:12px;text-align:right}
+  .bar{height:10px;border-radius:999px;background:#f1f2f4;overflow:hidden}
+  .seg{display:block;height:100%;float:left}
+  .seg.red{background:var(--bar-red)}
+  .seg.yellow{background:var(--bar-yellow)}
+  .seg.green{background:var(--bar-green)}
+
+  .grid-lower{display:grid;grid-template-columns: 1.05fr 1.5fr; gap:14px; margin-top:14px}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+  .btn{height:36px;padding:0 14px;border-radius:10px;border:1px solid var(--border);background:#fff;color:var(--text);font-weight:700;cursor:pointer}
+  .btn.primary{background: linear-gradient(135deg,var(--brand-red) 0%, var(--brand-orange) 100%); color:#fff;border-color:transparent}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:8px 6px;border-bottom:1px solid var(--border);text-align:left;color:var(--text)}
+  th{font-weight:700}
+
+  @media (max-width: 1280px){
+    .dashboard-wrap{max-width: 1240px;}
+    .grid-3{grid-template-columns: 1fr 1fr;}
+  }
+  @media (max-width: 1024px){
+    .app{grid-template-columns: 1fr;}
+    .grid-3{grid-template-columns: 1fr;}
+    .grid-lower{grid-template-columns: 1fr;}
+  }
+</style>
+
+<div class="dashboard-wrap">
+  <!-- Title bar: dots | PARKIT! | Logout -->
+  <div class="titlebar">
+    <div class="dots">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+    </div>
+
+    <div class="brandline">
+      <div class="park">
+        <span class="p1">Park</span><span class="p2">IT!</span>
+      </div>
+    </div>
+
+    <div class="logout-wrap">
+      <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="logout-btn">Logout</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="app">
+    <!-- Sidebar -->
     <aside class="sidebar">
       <div class="brand">
-        <div class="top">ParkIT Dashboard</div>
-        <div class="bot">CIT University</div>
+        <div class="mark">PI</div>
+        <div class="txt">
+          <div class="t1">ParkIT Online</div>
+          <div class="t2">Admin</div>
+        </div>
       </div>
+
       <nav class="nav">
-        <a href="#" class="active"><span class="i"><i class="fa-solid fa-gauge"></i></span> Overview</a>
-        <a href="#"><span class="i"><i class="fa-solid fa-car"></i></span> Parking Slots</a>
-        <a href="#"><span class="i"><i class="fa-solid fa-ticket"></i></span> Permits</a>
-        <a href="#"><span class="i"><i class="fa-solid fa-user"></i></span> Users</a>
-        <a href="#"><span class="i"><i class="fa-solid fa-gear"></i></span> Settings</a>
+        <a class="active" href="#">
+          <span class="ico">▦</span><span>Dashboard</span>
+        </a>
+        <a href="#">
+          <span class="ico">🅿</span><span>Parking Spaces</span>
+        </a>
+        <a href="#">
+          <span class="ico">👥</span><span>Manage Users</span>
+        </a>
       </nav>
-      <div style="margin-top:auto">
-        <a href="{% url 'logout' %}" class="btn btn-primary w-100">Logout</a>
+
+      <div class="spacer"></div>
+
+      <div class="profile">
+        <div class="avatar"></div>
+        <div>
+          <div class="nm">Admin Name</div>
+          <div class="em">admin email</div>
+        </div>
       </div>
     </aside>
 
-    <main class="content">
-      <div class="row">
-        <div class="col-12">
-          <div class="panel">
-            <h3>Today</h3>
-            <div class="kpis">
-              <div class="kpi">
-                <div class="label">Active Vehicles</div>
-                <div class="value">128</div>
-                <span class="badge ok"><i class="fa-solid fa-arrow-trend-up"></i> +6%</span>
-              </div>
-              <div class="kpi">
-                <div class="label">Available Slots</div>
-                <div class="value">42</div>
-                <span class="badge warn"><i class="fa-solid fa-triangle-exclamation"></i> Low</span>
-              </div>
-              <div class="kpi">
-                <div class="label">New Permits</div>
-                <div class="value">19</div>
-                <span class="badge ok"><i class="fa-solid fa-circle-check"></i> Stable</span>
-              </div>
-              <div class="kpi">
-                <div class="label">Violations</div>
-                <div class="value">3</div>
-                <span class="badge ok"><i class="fa-solid fa-shield"></i> Controlled</span>
-              </div>
+    <!-- Main -->
+    <section class="main">
+      <div class="grid-3">
+        <!-- Parking Lot Status -->
+        <div class="card">
+          <h4>Parking Lot Status</h4>
+          <div class="sub">10/06/2025</div>
+
+          <div class="status-row">
+            <div class="lot-name">NGE</div>
+            <div class="bar">
+              <span class="seg red" style="width:30%"></span>
+              <span class="seg yellow" style="width:20%"></span>
+              <span class="seg green" style="width:50%"></span>
             </div>
+            <div class="percent">72%</div>
+          </div>
+
+          <div class="status-row">
+            <div class="lot-name">ACAD</div>
+            <div class="bar">
+              <span class="seg red" style="width:10%"></span>
+              <span class="seg yellow" style="width:20%"></span>
+              <span class="seg green" style="width:70%"></span>
+            </div>
+            <div class="percent">90%</div>
+          </div>
+
+          <div class="status-row">
+            <div class="lot-name">BC</div>
+            <div class="bar">
+              <span class="seg red" style="width:34%"></span>
+              <span class="seg yellow" style="width:12%"></span>
+              <span class="seg green" style="width:54%"></span>
+            </div>
+            <div class="percent">64%</div>
+          </div>
+
+          <div class="status-row">
+            <div class="lot-name">GYM</div>
+            <div class="bar">
+              <span class="seg red" style="width:1%"></span>
+              <span class="seg yellow" style="width:10%"></span>
+              <span class="seg green" style="width:89%"></span>
+            </div>
+            <div class="percent">99%</div>
+          </div>
+
+          <div class="status-row">
+            <div class="lot-name">RTL</div>
+            <div class="bar">
+              <span class="seg red" style="width:4%"></span>
+              <span class="seg yellow" style="width:3%"></span>
+              <span class="seg green" style="width:93%"></span>
+            </div>
+            <div class="percent">93%</div>
+          </div>
+
+          <div class="status-row">
+            <div class="lot-name">BG</div>
+            <div class="bar">
+              <span class="seg red" style="width:20%"></span>
+              <span class="seg yellow" style="width:0%"></span>
+              <span class="seg green" style="width:80%"></span>
+            </div>
+            <div class="percent">80%</div>
           </div>
         </div>
 
-        <div class="col-6">
-          <div class="panel">
-            <h3>Recent Activity</h3>
-            <table class="table">
+        <!-- Total Entries -->
+        <div class="card metric">
+          <div>
+            <h4>Total Entries for the Day</h4>
+            <div class="sub">10/06/2025</div>
+            <div class="big">253</div>
+          </div>
+        </div>
+
+        <!-- Total Current Occupancy -->
+        <div class="card">
+          <h4>Total Current Occupancy</h4>
+          <div class="sub">10/06/2025</div>
+          <div class="metric" style="margin-bottom:8px;">
+            <div class="big" style="font-size:36px;">90%</div>
+          </div>
+
+          <div class="status-row">
+            <div class="lot-name">NGE</div>
+            <div class="bar">
+              <span class="seg red" style="width:30%"></span>
+              <span class="seg yellow" style="width:20%"></span>
+              <span class="seg green" style="width:50%"></span>
+            </div>
+            <div class="percent">70%</div>
+          </div>
+          <div class="status-row">
+            <div class="lot-name">ACAD</div>
+            <div class="bar">
+              <span class="seg red" style="width:10%"></span>
+              <span class="seg yellow" style="width:0%"></span>
+              <span class="seg green" style="width:90%"></span>
+            </div>
+            <div class="percent">90%</div>
+          </div>
+          <div class="status-row">
+            <div class="lot-name">BC</div>
+            <div class="bar">
+              <span class="seg red" style="width:22%"></span>
+              <span class="seg yellow" style="width:14%"></span>
+              <span class="seg green" style="width:64%"></span>
+            </div>
+            <div class="percent">64%</div>
+          </div>
+          <div class="status-row">
+            <div class="lot-name">GYM</div>
+            <div class="bar">
+              <span class="seg red" style="width:1%"></span>
+              <span class="seg yellow" style="width:0%"></span>
+              <span class="seg green" style="width:99%"></span>
+            </div>
+            <div class="percent">99%</div>
+          </div>
+          <div class="status-row">
+            <div class="lot-name">RTL</div>
+            <div class="bar">
+              <span class="seg red" style="width:7%"></span>
+              <span class="seg yellow" style="width:0%"></span>
+              <span class="seg green" style="width:93%"></span>
+            </div>
+            <div class="percent">93%</div>
+          </div>
+          <div class="status-row">
+            <div class="lot-name">BG</div>
+            <div class="bar">
+              <span class="seg red" style="width:20%"></span>
+              <span class="seg yellow" style="width:0%"></span>
+              <span class="seg green" style="width:80%"></span>
+            </div>
+            <div class="percent">80%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Second row -->
+      <div class="grid-lower">
+        <!-- Left -->
+        <div class="left-col">
+          <div class="card metric">
+            <div>
+              <h4>Total Exits for the Day</h4>
+              <div class="sub">10/06/2025</div>
+              <div class="big">158</div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:14px;">
+            <h4>Recent Activity</h4>
+            <table>
               <thead>
-                <tr>
-                  <th>Time</th>
-                  <th>Plate</th>
-                  <th>Action</th>
-                  <th>Zone</th>
-                </tr>
+                <tr><th>Time</th><th>Plate</th><th>Action</th><th>Zone</th></tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>08:41</td>
-                  <td>ABC-1234</td>
-                  <td><span class="chip"><i class="fa-solid fa-circle-arrow-right"></i> Enter</span></td>
-                  <td>North A2</td>
-                </tr>
-                <tr>
-                  <td>08:55</td>
-                  <td>XYZ-9876</td>
-                  <td><span class="chip"><i class="fa-solid fa-circle-arrow-left"></i> Exit</span></td>
-                  <td>Gate 3</td>
-                </tr>
-                <tr>
-                  <td>09:12</td>
-                  <td>CIT-0021</td>
-                  <td><span class="chip"><i class="fa-solid fa-ticket"></i> Permit</span></td>
-                  <td>Office</td>
-                </tr>
-                <tr>
-                  <td>09:20</td>
-                  <td>GHT-5521</td>
-                  <td><span class="chip"><i class="fa-solid fa-circle-exclamation"></i> Warning</span></td>
-                  <td>South B1</td>
-                </tr>
+                <tr><td>08:41</td><td>ABC-1234</td><td>Enter</td><td>North A2</td></tr>
+                <tr><td>08:55</td><td>XYZ-9876</td><td>Exit</td><td>Gate 3</td></tr>
+                <tr><td>09:12</td><td>CIT-0021</td><td>Permit</td><td>Office</td></tr>
+                <tr><td>09:20</td><td>GHT-5521</td><td>Warning</td><td>South B1</td></tr>
               </tbody>
             </table>
           </div>
-        </div>
 
-        <div class="col-6">
-          <div class="panel">
-            <h3>Capacity</h3>
-            <p style="color:#6b7280; margin:0 0 12px;">Live breakdown of zones</p>
-            <div style="display:grid; grid-template-columns: 1fr auto; gap:10px;">
-              <div>North Garage</div><div><span class="chip">78% full</span></div>
-              <div>South Lot</div><div><span class="chip">64% full</span></div>
-              <div>Visitor Area</div><div><span class="chip">38% full</span></div>
-              <div>Faculty Zone</div><div><span class="chip">82% full</span></div>
-            </div>
-            <div style="margin-top:14px; display:flex; gap:8px;">
-              <button class="btn btn-primary"><i class="fa-solid fa-plus"></i> Add Slot</button>
-              <button class="btn btn-primary" style="background:linear-gradient(90deg,#111827,#374151)">Manage</button>
+          <div class="card" style="margin-top:14px;">
+            <h4>Quick Actions</h4>
+            <div class="actions">
+              <button class="btn primary">Issue Permit</button>
+              <button class="btn primary">Reserve Slot</button>
+              <button class="btn">Add User</button>
+              <button class="btn">Export</button>
             </div>
           </div>
         </div>
 
-        <div class="col-4">
-          <div class="panel">
-            <h3>Alerts</h3>
-            <ul style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px;">
-              <li><span class="chip"><i class="fa-solid fa-bell"></i> South Lot nearing capacity</span></li>
-              <li><span class="chip"><i class="fa-solid fa-bell"></i> Permit batch pending approval</span></li>
-              <li><span class="chip"><i class="fa-solid fa-bell"></i> Camera 2 offline</span></li>
-            </ul>
+        <!-- Right: chart placeholder -->
+        <div class="card">
+          <h4>Peak Parking Times (weekly)</h4>
+          <div class="sub">10/06/2025 - 10/11/2025</div>
+          <div style="
+            height: 380px; border:1px dashed var(--border); border-radius:12px;
+            background: linear-gradient(180deg, rgba(245,247,250,0.5), #fff 40%);
+            display:flex; align-items:center; justify-content:center; color:var(--muted);">
+            Chart goes here (Map colors: #f57c00 → #b71c1c → #e53935 → #ffb400)
           </div>
         </div>
-
-        <div class="col-4">
-          <div class="panel">
-            <h3>Quick Actions</h3>
-            <div style="display:grid; grid-template-columns: repeat(2,1fr); gap:10px;">
-              <a class="btn btn-primary" href="#"><i class="fa-solid fa-ticket"></i> Issue Permit</a>
-              <a class="btn btn-primary" href="#"><i class="fa-solid fa-car"></i> Reserve Slot</a>
-              <a class="btn btn-primary" href="#"><i class="fa-solid fa-user-plus"></i> Add User</a>
-              <a class="btn btn-primary" href="#"><i class="fa-solid fa-download"></i> Export</a>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-4">
-          <div class="panel">
-            <h3>Status</h3>
-            <p style="margin:0 0 8px;">System Health</p>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-              <span class="badge ok"><i class="fa-solid fa-server"></i> API</span>
-              <span class="badge ok"><i class="fa-solid fa-database"></i> DB</span>
-              <span class="badge ok"><i class="fa-solid fa-wifi"></i> Network</span>
-              <span class="badge warn"><i class="fa-solid fa-video"></i> Camera 2</span>
-            </div>
-          </div>
-        </div>
-
       </div>
-    </main>
+    </section>
   </div>
 </div>
 {% endblock %}
