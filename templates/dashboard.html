@@ -4,260 +4,206 @@
 {% block title %}Admin - Dashboard{% endblock %}
 
 {% block content %}
-<div class="pm-app">
-  <!-- Top frame bar -->
-  <div class="pm-frame"></div>
-
-  <aside class="pm-sidebar">
-    <div class="pm-brand">
-      <div class="pm-brand-mark">
-        <span class="dot red"></span>
-        <span class="dot amber"></span>
-        <span class="dot green"></span>
+<div class="dashboard-wrap">
+  <div class="grid">
+    <!-- Parking Lot Status -->
+    <section class="card">
+      <div class="card-head">
+        <h3>Parking Lot Status</h3>
+        <span class="subdate">10/06/2025</span>
       </div>
-      <div class="pm-logo">
-        <span class="pk">Parking</span>
-        <span class="mg">Manager</span>
-      </div>
-    </div>
-
-    <nav class="pm-nav">
-      <a class="pm-nav-item active" href="#">
-        <span class="pm-icon">&#xE871;</span>
-        <span>Dashboard</span>
-      </a>
-      <a class="pm-nav-item" href="#">
-        <span class="pm-icon">&#xE531;</span>
-        <span>Parking Spaces</span>
-      </a>
-      <a class="pm-nav-item" href="#">
-        <span class="pm-icon">&#xE7FB;</span>
-        <span>Manage Users</span>
-      </a>
-    </nav>
-
-    <div class="pm-user">
-      <div class="pm-avatar"></div>
-      <div class="pm-user-meta">
-        <div class="pm-user-name">Admin Name</div>
-        <div class="pm-user-email">admin email</div>
-      </div>
-    </div>
-  </aside>
-
-  <main class="pm-main">
-    <div class="pm-grid">
-      <!-- Parking Lot Status -->
-      <section class="pm-card span-2">
-        <div class="pm-card-head">
-          <h3>Parking Lot Status</h3>
-          <div class="pm-legend">
-            <span class="legend red">Occupied</span>
-            <span class="legend green">Available</span>
+      <div class="status-list">
+        {% for lot,label_total,occ,free,percent in [
+          ('NGE',72,40,32,70),
+          ('ACAD',72,50,22,90),
+          ('BC',72,26,46,64),
+          ('GYM',72,65,7,90),
+          ('RTL',72,67,5,93),
+          ('BG',72,58,14,80)
+        ] %}
+        <div class="status-row">
+          <div class="lot-col">
+            <span class="lot-code">{{ lot }}</span>
           </div>
-        </div>
-        <div class="pm-list">
-          {% for lot,label_total,occ,free,percent in
-            [
-              ('NGE',72,40,32,70),
-              ('ACAD',72,50,22,90),
-              ('BC',72,26,46,64),
-              ('GYM',72,65,7,90),
-              ('RTL',72,67,5,93),
-              ('BG',72,58,14,80)
-            ] %}
-          <div class="pm-row">
-            <div class="lot-name">{{ lot }}</div>
+
+          <div class="bar-col">
             <div class="bar">
-              <div class="bar-occ" style="width: {{ percent }}%"></div>
-              <div class="bar-free"></div>
-            </div>
-            <div class="lot-meta">
-              <span class="meta">Total {{ label_total }}</span>
+              <span class="bar-occ" style="width: {{ percent }}%"></span>
+              <span class="bar-free" style="width: {{ 100|add:-percent }}%"></span>
             </div>
           </div>
-          {% endfor %}
-        </div>
-      </section>
 
-      <!-- Entries today -->
-      <section class="pm-card">
-        <div class="pm-kpi">
-          <div class="kpi-title">Total Entries for the Day</div>
-          <div class="kpi-value">253</div>
+          <div class="meta-col">
+            <span class="meta">
+              <span class="dot red"></span> {{ occ }}
+              <span class="sep">|</span>
+              <span class="dot green"></span> {{ free }}
+              <span class="sep">of</span> {{ label_total }}
+            </span>
+          </div>
         </div>
-      </section>
+        {% endfor %}
+      </div>
+    </section>
 
-      <!-- Exits today -->
-      <section class="pm-card">
-        <div class="pm-kpi">
-          <div class="kpi-title">Total Exits for the Day</div>
-          <div class="kpi-value">158</div>
-        </div>
-      </section>
+    <!-- Entries -->
+    <section class="card kpi">
+      <div class="card-head compact">
+        <h4>Total Entries for the Day</h4>
+        <span class="subdate">10/06/2025</span>
+      </div>
+      <div class="kpi-value">253</div>
+    </section>
 
-      <!-- Total Current Occupancy -->
-      <section class="pm-card">
-        <div class="pm-card-head between">
-          <h3>Total Current Occupancy</h3>
-          <div class="pm-occp">90%</div>
-        </div>
-        <div class="pm-occupancy-list">
-          {% for lot,perc in [('NGE',70),('ACAD',90),('BC',64),('GYM',90),('RTL',93),('BG',80)] %}
-          <div class="occ-row">
-            <div class="occ-name">{{ lot }}</div>
-            <div class="occ-bar">
-              <span class="occ-red" style="width: {{ perc }}%"></span>
-              <span class="occ-green"></span>
+    <!-- Exits -->
+    <section class="card kpi">
+      <div class="card-head compact">
+        <h4>Total Exits for the Day</h4>
+        <span class="subdate">10/06/2025</span>
+      </div>
+      <div class="kpi-value">158</div>
+    </section>
+
+    <!-- Current Occupancy -->
+    <section class="card">
+      <div class="card-head">
+        <h3>Total Current Occupancy</h3>
+        <span class="subdate">10/06/2025</span>
+        <span class="occupancy-pill">90%</span>
+      </div>
+
+      <div class="occ-list">
+        {% for lot,perc in [('NGE',70),('ACAD',90),('BC',64),('GYM',90),('RTL',93),('BG',80)] %}
+        <div class="occ-row">
+          <div class="lot-col"><span class="lot-code">{{ lot }}</span></div>
+
+          <div class="bar-col">
+            <div class="bar thin">
+              <span class="bar-red" style="width: {{ perc }}%"></span>
+              <span class="bar-green" style="width: {{ 100|add:-perc }}%"></span>
             </div>
-            <div class="occ-perc">{{ perc }}%</div>
           </div>
-          {% endfor %}
-        </div>
-      </section>
 
-      <!-- Peak Parking Times (weekly) -->
-      <section class="pm-card span-3">
-        <div class="pm-card-head">
-          <h3>Peak Parking Times (weekly)</h3>
-          <div class="pm-sub">10/05/2025 - 10/11/2025</div>
-        </div>
-        <div class="pm-bar-chart">
-          <div class="bar-col">
-            <div class="bar-rect h-378"></div>
-            <div class="bar-label">Mon</div>
-            <div class="bar-val">378</div>
-          </div>
-          <div class="bar-col">
-            <div class="bar-rect h-436"></div>
-            <div class="bar-label">Tue</div>
-            <div class="bar-val">436</div>
-          </div>
-          <div class="bar-col">
-            <div class="bar-rect h-256"></div>
-            <div class="bar-label">Wed</div>
-            <div class="bar-val">256</div>
-          </div>
-          <div class="bar-col">
-            <div class="bar-rect h-558 primary"></div>
-            <div class="bar-label">Thu</div>
-            <div class="bar-val">558</div>
-          </div>
-          <div class="bar-col">
-            <div class="bar-rect h-475"></div>
-            <div class="bar-label">Fri</div>
-            <div class="bar-val">475</div>
-          </div>
-          <div class="bar-col">
-            <div class="bar-rect h-184"></div>
-            <div class="bar-label">Sat</div>
-            <div class="bar-val">184</div>
-          </div>
-          <div class="bar-col">
-            <div class="bar-rect h-212"></div>
-            <div class="bar-label">Sun</div>
-            <div class="bar-val">212</div>
+          <div class="meta-col right">
+            <span class="perc">{{ perc }}%</span>
           </div>
         </div>
-      </section>
-    </div>
-  </main>
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- Weekly Peaks -->
+    <section class="card span-2">
+      <div class="card-head">
+        <h3>Peak Parking Times (weekly)</h3>
+        <span class="subdate">10/05/2025 - 10/11/2025</span>
+      </div>
+
+      <div class="bars">
+        {% for day, value, height, color in [
+          ('Mon',378,'38%','#d8b5a1'),
+          ('Tue',436,'52%','#d9a88d'),
+          ('Wed',256,'28%','#e6c7ba'),
+          ('Thu',558,'70%','#b13b11'),
+          ('Fri',475,'60%','#cf9a84'),
+          ('Sat',184,'20%','#e7d3c9'),
+          ('Sun',212,'24%','#e0c2b2')
+        ] %}
+        <div class="bar-group">
+          <div class="bar-stack" style="height: {{ height }}; background: {{ color }};"></div>
+          <div class="bar-label">{{ value }}</div>
+          <div class="bar-day">{{ day }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
 </div>
 
 <style>
-/* Layout */
-.pm-app{display:grid;grid-template-columns:260px 1fr;min-height:100vh;background:#0f1115}
-.pm-frame{grid-column:1/3;height:24px;background:#1a1d24}
-.pm-sidebar{background:#141820;color:#cfd3dc;display:flex;flex-direction:column;gap:24px;padding:20px 16px;border-right:1px solid #1f2430}
-.pm-main{background:#0f1115;padding:20px 22px 28px 22px}
-.pm-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
-.span-2{grid-column:span 2}
-.span-3{grid-column:span 4}
+/* Page spacing inside base content area */
+.dashboard-wrap { padding: 1.25rem 1.5rem; }
 
-/* Brand */
-.pm-brand-mark{display:flex;gap:8px;margin-bottom:16px}
-.pm-brand-mark .dot{width:10px;height:10px;border-radius:50%}
-.pm-brand-mark .red{background:#ff5f56}
-.pm-brand-mark .amber{background:#ffbd2e}
-.pm-brand-mark .green{background:#27c93f}
-.pm-logo .pk{display:block;color:#f7b35e;font-weight:800;font-size:28px;line-height:22px}
-.pm-logo .mg{display:block;color:#cfd3dc;font-weight:600;font-size:14px;margin-top:2px}
+/* Grid layout to match screenshot */
+.grid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.9fr 0.9fr 1.1fr;
+  grid-auto-rows: minmax(120px, auto);
+  gap: 16px;
+}
 
-/* Nav */
-.pm-nav{display:flex;flex-direction:column;gap:8px}
-.pm-nav-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;color:#cfd3dc;background:linear-gradient(90deg,#702d12 0%, #b96a1e 100%);text-decoration:none}
-.pm-nav-item:not(.active){background:transparent;border:1px solid #262b36}
-.pm-nav-item.active{box-shadow:0 0 0 1px #a65b1d inset}
-.pm-icon{font-family:'Material Icons Round', sans-serif;font-size:18px}
+/* Cards */
+.card {
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #eee;
+  padding: 16px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04);
+}
 
-/* User */
-.pm-user{margin-top:auto;display:flex;align-items:center;gap:12px;padding:10px;border:1px solid #262b36;border-radius:12px}
-.pm-avatar{width:36px;height:36px;border-radius:50%;background:#2b3140}
-.pm-user-name{color:#e7eaf1;font-weight:600}
-.pm-user-email{color:#9aa3b2;font-size:12px}
+.card.span-2 { grid-column: 1 / span 4; min-height: 280px; }
 
-/* Card */
-.pm-card{background:#141820;border:1px solid #1f2430;border-radius:16px;padding:16px}
-.pm-card-head{display:flex;align-items:center;gap:12px;margin-bottom:12px}
-.pm-card-head.between{justify-content:space-between}
-.pm-card h3{color:#e7eaf1;font-size:14px;font-weight:700;margin:0}
-.pm-sub{color:#9aa3b2;font-size:12px}
-.pm-legend{margin-left:auto;display:flex;gap:10px}
-.pm-legend .legend{font-size:11px;color:#9aa3b2}
-.pm-legend .red::before,.pm-legend .green::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;vertical-align:middle}
-.pm-legend .red::before{background:#e73838}
-.pm-legend .green::before{background:#1ec071}
+.card-head {
+  display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px;
+}
+.card-head.compact h4 { margin: 0; }
+.card h3 { font-size: 16px; font-weight: 700; margin: 0; }
+.card h4 { font-size: 14px; font-weight: 700; margin: 0; }
+.subdate { color: #8b8b8b; font-size: 12px; }
+.occupancy-pill {
+  margin-left: auto; background:#111; color:#fff; border-radius:20px;
+  padding: 2px 10px; font-size:12px; font-weight:700;
+}
 
-/* Status list */
-.pm-list{display:flex;flex-direction:column;gap:12px}
-.pm-row{display:grid;grid-template-columns:60px 1fr auto;gap:12px;align-items:center}
-.lot-name{color:#cfd3dc;font-weight:700}
-.bar{position:relative;height:10px;background:#232938;border-radius:999px;overflow:hidden}
-.bar-occ{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#e73b2d,#f04f3a);border-right:1px solid rgba(0,0,0,.2)}
-.bar-free{visibility:hidden}
-.lot-meta .meta{color:#75809a;font-size:11px}
+/* KPI */
+.kpi { display:flex; flex-direction:column; justify-content:space-between; }
+.kpi-value { font-weight:800; font-size:68px; line-height:1; padding: 8px 0 4px; }
 
-/* KPIs */
-.pm-kpi .kpi-title{color:#9aa3b2;font-size:12px;margin-bottom:8px}
-.pm-kpi .kpi-value{color:#e7eaf1;font-size:54px;font-weight:800;letter-spacing:1px}
+/* Lists */
+.status-list, .occ-list { display:flex; flex-direction:column; gap:10px; }
+.status-row, .occ-row {
+  display:grid; grid-template-columns: 60px 1fr 120px; align-items:center; gap:10px;
+}
+.lot-code { font-weight:700; letter-spacing:.3px; }
+.meta { color:#666; font-size:12px; }
+.meta .sep { color:#b7b7b7; padding: 0 6px; }
 
-/* Occupancy list */
-.pm-occp{color:#e7eaf1;font-weight:800}
-.pm-occupancy-list{display:flex;flex-direction:column;gap:10px}
-.occ-row{display:grid;grid-template-columns:50px 1fr 40px;gap:10px;align-items:center}
-.occ-name{color:#cfd3dc;font-weight:700}
-.occ-bar{position:relative;height:10px;background:#232938;border-radius:999px;overflow:hidden}
-.occ-red{position:absolute;height:100%;left:0;top:0;background:#e73838}
-.occ-green{display:none}
-.occ-perc{color:#9aa3b2;font-size:12px;text-align:right}
+/* Bars (no CSS custom properties, no arithmetic in template) */
+.bar {
+  position: relative; height: 12px; background:#f1f1f1; border-radius:999px; overflow:hidden;
+}
+.bar.thin { height: 10px; }
+.bar-occ, .bar-red {
+  position:absolute; left:0; top:0; bottom:0; background:#e43838; display:block;
+}
+.bar-free, .bar-green {
+  position:absolute; right:0; top:0; bottom:0; background:#2ecb5b; display:block;
+}
+.meta-col.right { text-align:right; }
+.perc { font-weight:700; }
 
-/* Bar chart */
-.pm-bar-chart{display:grid;grid-template-columns:repeat(7,1fr);gap:16px;align-items:end;height:260px;margin-top:8px}
-.bar-col{display:flex;flex-direction:column;align-items:center;gap:6px}
-.bar-rect{width:56px;border-radius:12px 12px 6px 6px;background:linear-gradient(180deg,#c08956,#6b3b1f)}
-.bar-rect.primary{background:linear-gradient(180deg,#f06a2f,#862b16)}
-.bar-label{color:#9aa3b2;font-size:12px}
-.bar-val{color:#cfd3dc;font-size:12px}
+/* Dots */
+.dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; position:relative; top:-1px; }
+.dot.red { background:#e43838; }
+.dot.green { background:#2ecb5b; }
 
-/* Bar heights (approximate to mock numbers) */
-.h-558{height:220px}
-.h-475{height:195px}
-.h-436{height:180px}
-.h-378{height:160px}
-.h-256{height:120px}
-.h-212{height:100px}
-.h-184{height:90px}
+/* Weekly bars */
+.bars {
+  display:grid; grid-template-columns: repeat(7, 1fr); gap:20px; padding:6px 10px 0; align-items:end;
+}
+.bar-group { text-align:center; }
+.bar-stack { width:100%; border-radius:10px 10px 0 0; }
+.bar-label { margin-top:8px; font-weight:700; color:#222; }
+.bar-day { color:#6d6d6d; font-size:12px; }
 
 /* Responsive */
-@media (max-width: 1200px){
-  .pm-grid{grid-template-columns:repeat(2,1fr)}
-  .span-3{grid-column:span 2}
+@media (max-width: 1100px) {
+  .grid { grid-template-columns: 1fr 1fr; }
+  .card.span-2 { grid-column: 1 / span 2; }
 }
-@media (max-width: 780px){
-  .pm-app{grid-template-columns:1fr}
-  .pm-sidebar{position:sticky;top:0;z-index:3}
-  .pm-grid{grid-template-columns:1fr}
-  .span-2,.span-3{grid-column:span 1}
+@media (max-width: 680px) {
+  .grid { grid-template-columns: 1fr; }
+  .card.span-2 { grid-column: 1 / span 1; }
 }
 </style>
 {% endblock %}
