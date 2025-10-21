@@ -1,209 +1,47 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Admin - Dashboard{% endblock %}
+{% block title %}User - Dashboard{% endblock %}
 
 {% block content %}
-<div class="dashboard-wrap">
-  <div class="grid">
-    <!-- Parking Lot Status -->
-    <section class="card">
-      <div class="card-head">
-        <h3>Parking Lot Status</h3>
-        <span class="subdate">10/06/2025</span>
-      </div>
-      <div class="status-list">
-        {% for lot,label_total,occ,free,percent in [
-          ('NGE',72,40,32,70),
-          ('ACAD',72,50,22,90),
-          ('BC',72,26,46,64),
-          ('GYM',72,65,7,90),
-          ('RTL',72,67,5,93),
-          ('BG',72,58,14,80)
-        ] %}
-        <div class="status-row">
-          <div class="lot-col">
-            <span class="lot-code">{{ lot }}</span>
-          </div>
+<div class="dashboard-shell">
+  <!-- Page title -->
+  <div class="page-head">
+    <h2>Dashboard</h2>
+  </div>
 
-          <div class="bar-col">
-            <div class="bar">
-              <span class="bar-occ" style="width: {{ percent }}%"></span>
-              <span class="bar-free" style="width: {{ 100|add:-percent }}%"></span>
-            </div>
-          </div>
-
-          <div class="meta-col">
-            <span class="meta">
-              <span class="dot red"></span> {{ occ }}
-              <span class="sep">|</span>
-              <span class="dot green"></span> {{ free }}
-              <span class="sep">of</span> {{ label_total }}
-            </span>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-    </section>
-
-    <!-- Entries -->
-    <section class="card kpi">
-      <div class="card-head compact">
-        <h4>Total Entries for the Day</h4>
-        <span class="subdate">10/06/2025</span>
-      </div>
-      <div class="kpi-value">253</div>
-    </section>
-
-    <!-- Exits -->
-    <section class="card kpi">
-      <div class="card-head compact">
-        <h4>Total Exits for the Day</h4>
-        <span class="subdate">10/06/2025</span>
-      </div>
-      <div class="kpi-value">158</div>
-    </section>
-
-    <!-- Current Occupancy -->
-    <section class="card">
-      <div class="card-head">
-        <h3>Total Current Occupancy</h3>
-        <span class="subdate">10/06/2025</span>
-        <span class="occupancy-pill">90%</span>
-      </div>
-
-      <div class="occ-list">
-        {% for lot,perc in [('NGE',70),('ACAD',90),('BC',64),('GYM',90),('RTL',93),('BG',80)] %}
-        <div class="occ-row">
-          <div class="lot-col"><span class="lot-code">{{ lot }}</span></div>
-
-          <div class="bar-col">
-            <div class="bar thin">
-              <span class="bar-red" style="width: {{ perc }}%"></span>
-              <span class="bar-green" style="width: {{ 100|add:-perc }}%"></span>
-            </div>
-          </div>
-
-          <div class="meta-col right">
-            <span class="perc">{{ perc }}%</span>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-    </section>
-
-    <!-- Weekly Peaks -->
-    <section class="card span-2">
-      <div class="card-head">
-        <h3>Peak Parking Times (weekly)</h3>
-        <span class="subdate">10/05/2025 - 10/11/2025</span>
-      </div>
-
-      <div class="bars">
-        {% for day, value, height, color in [
-          ('Mon',378,'38%','#d8b5a1'),
-          ('Tue',436,'52%','#d9a88d'),
-          ('Wed',256,'28%','#e6c7ba'),
-          ('Thu',558,'70%','#b13b11'),
-          ('Fri',475,'60%','#cf9a84'),
-          ('Sat',184,'20%','#e7d3c9'),
-          ('Sun',212,'24%','#e0c2b2')
-        ] %}
-        <div class="bar-group">
-          <div class="bar-stack" style="height: {{ height }}; background: {{ color }};"></div>
-          <div class="bar-label">{{ value }}</div>
-          <div class="bar-day">{{ day }}</div>
-        </div>
-        {% endfor %}
-      </div>
-    </section>
+  <!-- Blank canvas area -->
+  <div class="workspace-blank">
+    <!-- Put cards/widgets here later -->
   </div>
 </div>
 
 <style>
-/* Page spacing inside base content area */
-.dashboard-wrap { padding: 1.25rem 1.5rem; }
-
-/* Grid layout to match screenshot */
-.grid {
-  display: grid;
-  grid-template-columns: 1.2fr 0.9fr 0.9fr 1.1fr;
-  grid-auto-rows: minmax(120px, auto);
-  gap: 16px;
+/* Matches the wide white canvas shown in your screenshot */
+.dashboard-shell {
+  padding: 16px 18px;
 }
 
-/* Cards */
-.card {
-  background: #fff;
+.page-head h2 {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  color: #1f1f1f;
+}
+
+/* Big empty white area */
+.workspace-blank {
+  background: #ffffff;
   border-radius: 10px;
-  border: 1px solid #eee;
-  padding: 16px;
+  border: 1px solid #f0f0f0;
+  min-height: 68vh;     /* adjust to taste */
   box-shadow: 0 1px 2px rgba(0,0,0,.04);
 }
 
-.card.span-2 { grid-column: 1 / span 4; min-height: 280px; }
-
-.card-head {
-  display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px;
-}
-.card-head.compact h4 { margin: 0; }
-.card h3 { font-size: 16px; font-weight: 700; margin: 0; }
-.card h4 { font-size: 14px; font-weight: 700; margin: 0; }
-.subdate { color: #8b8b8b; font-size: 12px; }
-.occupancy-pill {
-  margin-left: auto; background:#111; color:#fff; border-radius:20px;
-  padding: 2px 10px; font-size:12px; font-weight:700;
-}
-
-/* KPI */
-.kpi { display:flex; flex-direction:column; justify-content:space-between; }
-.kpi-value { font-weight:800; font-size:68px; line-height:1; padding: 8px 0 4px; }
-
-/* Lists */
-.status-list, .occ-list { display:flex; flex-direction:column; gap:10px; }
-.status-row, .occ-row {
-  display:grid; grid-template-columns: 60px 1fr 120px; align-items:center; gap:10px;
-}
-.lot-code { font-weight:700; letter-spacing:.3px; }
-.meta { color:#666; font-size:12px; }
-.meta .sep { color:#b7b7b7; padding: 0 6px; }
-
-/* Bars (no CSS custom properties, no arithmetic in template) */
-.bar {
-  position: relative; height: 12px; background:#f1f1f1; border-radius:999px; overflow:hidden;
-}
-.bar.thin { height: 10px; }
-.bar-occ, .bar-red {
-  position:absolute; left:0; top:0; bottom:0; background:#e43838; display:block;
-}
-.bar-free, .bar-green {
-  position:absolute; right:0; top:0; bottom:0; background:#2ecb5b; display:block;
-}
-.meta-col.right { text-align:right; }
-.perc { font-weight:700; }
-
-/* Dots */
-.dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; position:relative; top:-1px; }
-.dot.red { background:#e43838; }
-.dot.green { background:#2ecb5b; }
-
-/* Weekly bars */
-.bars {
-  display:grid; grid-template-columns: repeat(7, 1fr); gap:20px; padding:6px 10px 0; align-items:end;
-}
-.bar-group { text-align:center; }
-.bar-stack { width:100%; border-radius:10px 10px 0 0; }
-.bar-label { margin-top:8px; font-weight:700; color:#222; }
-.bar-day { color:#6d6d6d; font-size:12px; }
-
-/* Responsive */
-@media (max-width: 1100px) {
-  .grid { grid-template-columns: 1fr 1fr; }
-  .card.span-2 { grid-column: 1 / span 2; }
-}
-@media (max-width: 680px) {
-  .grid { grid-template-columns: 1fr; }
-  .card.span-2 { grid-column: 1 / span 1; }
+/* Optional: keep spacing nice on small screens */
+@media (max-width: 768px) {
+  .dashboard-shell { padding: 12px; }
+  .workspace-blank { min-height: 60vh; }
 }
 </style>
 {% endblock %}
