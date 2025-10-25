@@ -1,0 +1,686 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Admin - Manage Slots{% endblock %}
+
+{% block content %}
+<style>
+  :root{
+    --brand-red:#b71c1c;
+    --brand-orange:#f57c00;
+    --win-red:#ff5f57;
+    --win-yellow:#ffbd2e;
+    --win-green:#28c840;
+    --bar-red:#e53935;
+    --bar-yellow:#ffb400;
+    --bar-green:#2fbf4a;
+    --surface:#ffffff;
+    --border:#eef0f3;
+    --text:#111827;
+    --muted:#6b7280;
+    --canvas-bg:#f5f7fa;
+  }
+
+  body{ background:var(--canvas-bg); }
+
+  .dashboard-wrap{
+    width:100%;
+    max-width: 1520px;
+    margin:0 auto;
+    padding:18px 18px 26px;
+  }
+
+  .app{
+    display:grid;
+    grid-template-columns: 270px 1fr;
+    gap:14px;
+    min-height: calc(100vh - 80px);
+  }
+
+  .sidebar{
+    background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;
+    display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);
+  }
+
+  .brand{
+    padding-bottom:10px;border-bottom:1px solid var(--border);
+    display: flex;flex-direction: column;gap: 8px;
+  }
+
+  .dots-container{display:flex;gap:6px;align-items:center;}
+  .dot{width:10px;height:10px;border-radius:50%}
+  .dot.red{background:var(--win-red)}
+  .dot.yellow{background:var(--win-yellow)}
+  .dot.green{background:var(--win-green)}
+
+  .txt{line-height:1.1;}
+  .park-brand{
+    font-family: Montserrat, sans-serif;
+    font-weight:800;letter-spacing:.2px;font-size:17px;line-height:1;
+  }
+  .park-brand .p1{ color:var(--brand-red); }
+  .park-brand .p2{ color:#ffb400; }
+  .txt .t2{font-weight:600;color:var(--muted);font-size:11px; margin-top:2px;}
+
+  .nav{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+  .nav a{
+    display:flex;align-items:center;gap:10px;text-decoration:none;
+    padding:11px 12px;border-radius:12px;border:1px solid var(--border);
+    color:var(--text); background:#fff; transition:.2s;
+  }
+  .nav a:hover{transform:translateY(-1px); border-color:var(--brand-red); color:var(--brand-red)}
+  .nav a.active{
+    background: linear-gradient(135deg,var(--brand-red) 0%, var(--brand-orange) 100%);
+    color:#fff; border-color:transparent;
+  }
+  .ico{
+    width:28px;height:28px;border-radius:8px;background:#f8f9fa;
+    display:flex;align-items:center;justify-content:center;color:#6b7280;font-weight:700;
+  }
+  .spacer{flex:1}
+
+  .profile{
+    padding:12px;border:1px solid var(--border);border-radius:12px;background:#fff;
+    display:flex;align-items:center;gap:10px;cursor:pointer;transition: all 0.2s;
+  }
+  .profile:hover{border-color:var(--brand-red);background:#fff5f5;}
+  .avatar{width:30px;height:30px;border-radius:50%;background:#f3f4f6}
+  .nm{font-weight:600;font-size:12px;color:var(--text)}
+  .em{font-size:11px;color:var(--muted)}
+
+  .modal-overlay{
+    position: fixed;top: 0;left: 0;width: 100%;height: 100%;
+    background: rgba(0, 0, 0, 0.5);display: none;align-items: center;
+    justify-content: center;z-index: 1000;
+  }
+  .modal-overlay.show{display: flex;}
+
+  .account-modal{
+    background: #fff;border-radius: 12px;width: 90%;max-width: 420px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);position: relative;
+  }
+
+  .modal-header{
+    padding: 20px 24px;border-bottom: 1px solid var(--border);
+    display: flex;align-items: center;justify-content: space-between;
+  }
+
+  .modal-title{font-size: 18px;font-weight: 700;color: var(--text);margin: 0;}
+
+  .close-btn{
+    width: 28px;height: 28px;border: none;background: transparent;
+    color: var(--muted);font-size: 20px;cursor: pointer;
+    display: flex;align-items: center;justify-content: center;
+    border-radius: 6px;transition: all 0.2s;
+  }
+  .close-btn:hover{background: var(--border);color: var(--text);}
+
+  .modal-body{padding: 24px;}
+  .form-field{margin-bottom: 20px;}
+  .form-field:last-child{margin-bottom: 0;}
+
+  .field-label{
+    display: block;font-size: 13px;font-weight: 600;
+    color: var(--text);margin-bottom: 8px;
+  }
+
+  .field-input{
+    width: 100%;padding: 10px 12px;border: 1px solid var(--border);
+    border-radius: 8px;font-size: 14px;color: var(--text);
+    background: #f8f9fa;font-family: inherit;
+  }
+  .field-input:focus{outline: none;border-color: var(--brand-red);background: #fff;}
+
+  .modal-footer{
+    padding: 16px 24px;border-top: 1px solid var(--border);
+    display: flex;justify-content: flex-end;gap: 10px;
+  }
+
+  .logout-btn-modal, .btn-save{
+    padding: 10px 20px;border: none;border-radius: 8px;
+    font-weight: 700;font-size: 14px;cursor: pointer;
+    background: linear-gradient(135deg,var(--brand-red) 0%, var(--brand-orange) 100%);
+    color: #fff;transition: all 0.2s;
+  }
+  .logout-btn-modal:hover, .btn-save:hover{
+    filter: brightness(1.1);transform: translateY(-1px);
+  }
+
+  .btn-delete{
+    padding: 10px 20px;border: none;border-radius: 8px;
+    font-weight: 700;font-size: 14px;cursor: pointer;
+    background: #dc2626;color: #fff;transition: all 0.2s;
+  }
+  .btn-delete:hover{background: #b91c1c;}
+
+  .content-wrapper{display: flex;flex-direction: column;gap: 14px;}
+
+  .top-header{
+    display: flex;align-items: center;justify-content: space-between;padding: 0 4px;
+  }
+
+  .left-section{display: flex;align-items: center;gap: 16px;}
+  .location-label{font-size: 14px;font-weight: 700;color: var(--text);}
+  .location-filters{display: flex;gap: 8px;}
+
+  .filter-btn{
+    padding: 6px 14px;border: 1px solid var(--border);background: #fff;
+    border-radius: 6px;font-weight: 600;font-size: 13px;
+    cursor: pointer;transition: all 0.2s;color: var(--text);
+  }
+  .filter-btn:hover{border-color: var(--brand-red);color: var(--brand-red);}
+  .filter-btn.active{
+    background: linear-gradient(135deg,var(--brand-red) 0%, var(--brand-orange) 100%);
+    color: #fff;border-color: transparent;
+  }
+
+  .slot-counters{display: flex;gap: 12px;}
+
+  .counter{
+    display: flex;align-items: center;gap: 8px;padding: 6px 14px;
+    border-radius: 6px;border: 1px solid var(--border);background: #fff;
+  }
+
+  .counter-number{font-size: 16px;font-weight: 700;}
+  .counter.filled .counter-number{color: #e53935;}
+  .counter.empty .counter-number{color: #2fbf4a;}
+  .counter-label{font-size: 12px;font-weight: 600;color: var(--muted);}
+
+  .main{
+    background:#fff;border:1px solid var(--border);border-radius:12px;
+    box-shadow:0 1px 2px rgba(0,0,0,.04);padding:20px;
+  }
+
+  /* Parking Grid - 3 columns with proper row spacing */
+  .parking-grid{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px 8px;
+    max-width: 900px;
+  }
+
+  .parking-slot{
+    height: 56px;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .parking-slot:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  }
+
+  .parking-slot.selected{
+    border: 3px solid #1976d2;
+    box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.2);
+  }
+
+  .slot-part{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 15px;
+    border-right: 2px solid #fff;
+  }
+
+  .slot-part:last-child{
+    border-right: none;
+  }
+
+  .slot-part.available{
+    background: linear-gradient(135deg, #2fbf4a 0%, #28c840 100%);
+    color: #fff;
+  }
+
+  .slot-part.unavailable{
+    background: linear-gradient(135deg, #e53935 0%, #ff5f57 100%);
+    color: #fff;
+  }
+
+  .slot-number{
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .status-toggle{display: flex;gap: 8px;margin-bottom: 20px;}
+
+  .status-btn{
+    flex: 1;padding: 12px;border: 2px solid var(--border);
+    background: #fff;border-radius: 8px;font-weight: 700;
+    font-size: 14px;cursor: pointer;transition: all 0.2s;
+  }
+
+  .status-btn.available-btn{border-color: #28c840;color: #28c840;}
+  .status-btn.available-btn.active{background: #28c840;color: #fff;}
+  .status-btn.unavailable-btn{border-color: #ff5f57;color: #ff5f57;}
+  .status-btn.unavailable-btn.active{background: #ff5f57;color: #fff;}
+
+  @media (max-width: 1024px){
+    .app{grid-template-columns: 1fr;}
+    .parking-grid{grid-template-columns: repeat(2, 1fr);}
+    .left-section{flex-wrap: wrap;}
+  }
+</style>
+
+<div class="dashboard-wrap">
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="dots-container">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <div class="txt">
+          <div class="park-brand">
+            <span class="p1">Park</span><span class="p2">IT!</span>
+          </div>
+          <div class="t2">Online</div>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <a href="{% url 'dashboard' %}">
+          <span class="ico">▦</span><span>Dashboard</span>
+        </a>
+        <a class="active" href="{% url 'parking_spaces' %}">
+          <span class="ico">🅿</span><span>Parking Spaces</span>
+        </a>
+        <a href="#">
+          <span class="ico">👥</span><span>Manage Users</span>
+        </a>
+      </nav>
+
+      <div class="spacer"></div>
+
+      <div class="profile" id="profileTrigger">
+        <div class="avatar"></div>
+        <div>
+          <div class="nm">{{ full_name|default:"Admin Name" }}</div>
+          <div class="em">{{ email|default:"admin email" }}</div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="content-wrapper">
+      <div class="top-header">
+        <div class="left-section">
+          <div class="location-label">Location</div>
+          <div class="location-filters">
+            <button class="filter-btn active" data-location="NGE">NGE</button>
+            <button class="filter-btn" data-location="ACAD">ACAD</button>
+            <button class="filter-btn" data-location="BC">BC</button>
+            <button class="filter-btn" data-location="GYM">GYM</button>
+            <button class="filter-btn" data-location="RTL">RTL</button>
+            <button class="filter-btn" data-location="BG">BG</button>
+          </div>
+        </div>
+
+        <div class="slot-counters">
+          <div class="counter filled">
+            <span class="counter-number" id="filledCount">0</span>
+            <span class="counter-label">Filled</span>
+          </div>
+          <div class="counter empty">
+            <span class="counter-number" id="emptyCount">0</span>
+            <span class="counter-label">Empty</span>
+          </div>
+        </div>
+      </div>
+
+      <section class="main">
+        <div class="parking-grid" id="parkingGrid"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- Account Modal -->
+<div class="modal-overlay" id="accountModal">
+  <div class="account-modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Account</h3>
+      <button class="close-btn" id="closeAccountModal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-field">
+        <label class="field-label">Full Name</label>
+        <input type="text" class="field-input" value="{{ full_name|default:'User Name' }}" readonly>
+      </div>
+      <div class="form-field">
+        <label class="field-label">Username</label>
+        <input type="text" class="field-input" value="{{ username|default:'username' }}" readonly>
+      </div>
+      <div class="form-field">
+        <label class="field-label">Email</label>
+        <input type="email" class="field-input" value="{{ email|default:'user@email.com' }}" readonly>
+      </div>
+      <div class="form-field">
+        <label class="field-label">Password</label>
+        <input type="password" class="field-input" value="********" readonly>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <form method="post" action="{% url 'logout' %}" style="margin:0;">
+        {% csrf_token %}
+        <button type="submit" class="logout-btn-modal">Logout</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Manage Slot Modal -->
+<div class="modal-overlay" id="slotModal">
+  <div class="account-modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Manage Slot</h3>
+      <button class="close-btn" id="closeSlotModal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-field">
+        <label class="field-label">Slot Status</label>
+        <div class="status-toggle">
+          <button class="status-btn available-btn active" id="availableBtn">Available</button>
+          <button class="status-btn unavailable-btn" id="unavailableBtn">Unavailable</button>
+        </div>
+      </div>
+      <div class="form-field">
+        <label class="field-label">Plate Number</label>
+        <input type="text" class="field-input" id="plateNumber" placeholder="GAW1234">
+      </div>
+      <div class="form-field">
+        <label class="field-label">Date</label>
+        <input type="date" class="field-input" id="slotDate" value="2025-10-04">
+      </div>
+      <div class="form-field">
+        <label class="field-label">Time</label>
+        <input type="time" class="field-input" id="slotTime" value="09:00">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-delete" id="deleteSlot">🗑</button>
+      <button class="btn-save" id="saveChanges">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // UNIQUE parking data for EACH location - 24 slots per location
+  const parkingData = {
+    'NGE': [
+      { slot: 1, left: 'available', right: 'available', capacity: 13 },
+      { slot: 2, left: 'unavailable', right: 'unavailable' },
+      { slot: 3, left: 'available', right: 'available' },
+      { slot: 4, left: 'available', right: 'available' },
+      { slot: 5, left: 'available', right: 'unavailable' },
+      { slot: 6, left: 'unavailable', right: 'unavailable' },
+      { slot: 7, left: 'unavailable', right: 'available' },
+      { slot: 8, left: 'available', right: 'unavailable' },
+      { slot: 9, left: 'available', right: 'unavailable' },
+      { slot: 10, left: 'unavailable', right: 'unavailable' },
+      { slot: 11, left: 'unavailable', right: 'available' },
+      { slot: 12, left: 'available', right: 'unavailable' },
+      { slot: 13, left: 'available', right: 'available' },
+      { slot: 14, left: 'unavailable', right: 'available' },
+      { slot: 15, left: 'available', right: 'unavailable' },
+      { slot: 16, left: 'unavailable', right: 'unavailable' },
+      { slot: 17, left: 'available', right: 'available' },
+      { slot: 18, left: 'available', right: 'unavailable' },
+      { slot: 19, left: 'unavailable', right: 'available' },
+      { slot: 20, left: 'available', right: 'available' },
+      { slot: 21, left: 'unavailable', right: 'unavailable' },
+      { slot: 22, left: 'available', right: 'unavailable' },
+      { slot: 23, left: 'available', right: 'available' },
+      { slot: 24, left: 'unavailable', right: 'available' }
+    ],
+    'ACAD': [
+      { slot: 1, left: 'available', right: 'unavailable' },
+      { slot: 2, left: 'available', right: 'available' },
+      { slot: 3, left: 'unavailable', right: 'unavailable' },
+      { slot: 4, left: 'available', right: 'available' },
+      { slot: 5, left: 'unavailable', right: 'available' },
+      { slot: 6, left: 'available', right: 'unavailable' },
+      { slot: 7, left: 'available', right: 'available' },
+      { slot: 8, left: 'unavailable', right: 'unavailable' },
+      { slot: 9, left: 'available', right: 'unavailable' },
+      { slot: 10, left: 'available', right: 'available' },
+      { slot: 11, left: 'unavailable', right: 'unavailable' },
+      { slot: 12, left: 'available', right: 'available' },
+      { slot: 13, left: 'unavailable', right: 'available' },
+      { slot: 14, left: 'available', right: 'unavailable' },
+      { slot: 15, left: 'unavailable', right: 'unavailable' },
+      { slot: 16, left: 'available', right: 'available' },
+      { slot: 17, left: 'unavailable', right: 'unavailable' },
+      { slot: 18, left: 'available', right: 'available' },
+      { slot: 19, left: 'available', right: 'unavailable' },
+      { slot: 20, left: 'unavailable', right: 'available' },
+      { slot: 21, left: 'available', right: 'available' },
+      { slot: 22, left: 'unavailable', right: 'unavailable' },
+      { slot: 23, left: 'available', right: 'unavailable' },
+      { slot: 24, left: 'available', right: 'available' }
+    ],
+    'BC': [
+      { slot: 1, left: 'unavailable', right: 'unavailable' },
+      { slot: 2, left: 'available', right: 'available' },
+      { slot: 3, left: 'unavailable', right: 'available' },
+      { slot: 4, left: 'available', right: 'unavailable' },
+      { slot: 5, left: 'available', right: 'available' },
+      { slot: 6, left: 'unavailable', right: 'unavailable' },
+      { slot: 7, left: 'available', right: 'unavailable' },
+      { slot: 8, left: 'available', right: 'available' },
+      { slot: 9, left: 'unavailable', right: 'available' },
+      { slot: 10, left: 'available', right: 'unavailable' },
+      { slot: 11, left: 'available', right: 'available' },
+      { slot: 12, left: 'unavailable', right: 'unavailable' },
+      { slot: 13, left: 'available', right: 'available' },
+      { slot: 14, left: 'unavailable', right: 'unavailable' },
+      { slot: 15, left: 'available', right: 'unavailable' },
+      { slot: 16, left: 'available', right: 'available' },
+      { slot: 17, left: 'unavailable', right: 'available' },
+      { slot: 18, left: 'unavailable', right: 'unavailable' },
+      { slot: 19, left: 'available', right: 'available' },
+      { slot: 20, left: 'unavailable', right: 'available' },
+      { slot: 21, left: 'available', right: 'unavailable' },
+      { slot: 22, left: 'available', right: 'available' },
+      { slot: 23, left: 'unavailable', right: 'unavailable' },
+      { slot: 24, left: 'available', right: 'available' }
+    ],
+    'GYM': [
+      { slot: 1, left: 'available', right: 'available' },
+      { slot: 2, left: 'available', right: 'unavailable' },
+      { slot: 3, left: 'unavailable', right: 'available' },
+      { slot: 4, left: 'available', right: 'available' },
+      { slot: 5, left: 'unavailable', right: 'unavailable' },
+      { slot: 6, left: 'available', right: 'available' },
+      { slot: 7, left: 'available', right: 'unavailable' },
+      { slot: 8, left: 'unavailable', right: 'available' },
+      { slot: 9, left: 'available', right: 'available' },
+      { slot: 10, left: 'available', right: 'unavailable' },
+      { slot: 11, left: 'unavailable', right: 'unavailable' },
+      { slot: 12, left: 'available', right: 'available' },
+      { slot: 13, left: 'unavailable', right: 'available' },
+      { slot: 14, left: 'available', right: 'unavailable' },
+      { slot: 15, left: 'available', right: 'available' },
+      { slot: 16, left: 'unavailable', right: 'unavailable' },
+      { slot: 17, left: 'available', right: 'available' },
+      { slot: 18, left: 'available', right: 'unavailable' },
+      { slot: 19, left: 'unavailable', right: 'available' },
+      { slot: 20, left: 'available', right: 'available' },
+      { slot: 21, left: 'unavailable', right: 'unavailable' },
+      { slot: 22, left: 'available', right: 'available' },
+      { slot: 23, left: 'available', right: 'unavailable' },
+      { slot: 24, left: 'unavailable', right: 'available' }
+    ],
+    'RTL': [
+      { slot: 1, left: 'unavailable', right: 'available' },
+      { slot: 2, left: 'available', right: 'unavailable' },
+      { slot: 3, left: 'available', right: 'available' },
+      { slot: 4, left: 'unavailable', right: 'unavailable' },
+      { slot: 5, left: 'available', right: 'available' },
+      { slot: 6, left: 'available', right: 'unavailable' },
+      { slot: 7, left: 'unavailable', right: 'available' },
+      { slot: 8, left: 'available', right: 'available' },
+      { slot: 9, left: 'unavailable', right: 'unavailable' },
+      { slot: 10, left: 'available', right: 'unavailable' },
+      { slot: 11, left: 'available', right: 'available' },
+      { slot: 12, left: 'unavailable', right: 'available' },
+      { slot: 13, left: 'available', right: 'unavailable' },
+      { slot: 14, left: 'unavailable', right: 'unavailable' },
+      { slot: 15, left: 'available', right: 'available' },
+      { slot: 16, left: 'available', right: 'unavailable' },
+      { slot: 17, left: 'unavailable', right: 'available' },
+      { slot: 18, left: 'available', right: 'available' },
+      { slot: 19, left: 'unavailable', right: 'unavailable' },
+      { slot: 20, left: 'available', right: 'available' },
+      { slot: 21, left: 'available', right: 'unavailable' },
+      { slot: 22, left: 'unavailable', right: 'available' },
+      { slot: 23, left: 'available', right: 'available' },
+      { slot: 24, left: 'unavailable', right: 'unavailable' }
+    ],
+    'BG': [
+      { slot: 1, left: 'available', right: 'unavailable' },
+      { slot: 2, left: 'unavailable', right: 'available' },
+      { slot: 3, left: 'available', right: 'available' },
+      { slot: 4, left: 'available', right: 'unavailable' },
+      { slot: 5, left: 'unavailable', right: 'unavailable' },
+      { slot: 6, left: 'available', right: 'available' },
+      { slot: 7, left: 'unavailable', right: 'available' },
+      { slot: 8, left: 'available', right: 'unavailable' },
+      { slot: 9, left: 'available', right: 'available' },
+      { slot: 10, left: 'unavailable', right: 'unavailable' },
+      { slot: 11, left: 'available', right: 'unavailable' },
+      { slot: 12, left: 'available', right: 'available' },
+      { slot: 13, left: 'unavailable', right: 'available' },
+      { slot: 14, left: 'available', right: 'unavailable' },
+      { slot: 15, left: 'unavailable', right: 'unavailable' },
+      { slot: 16, left: 'available', right: 'available' },
+      { slot: 17, left: 'available', right: 'unavailable' },
+      { slot: 18, left: 'unavailable', right: 'available' },
+      { slot: 19, left: 'available', right: 'available' },
+      { slot: 20, left: 'unavailable', right: 'unavailable' },
+      { slot: 21, left: 'available', right: 'available' },
+      { slot: 22, left: 'available', right: 'unavailable' },
+      { slot: 23, left: 'unavailable', right: 'available' },
+      { slot: 24, left: 'available', right: 'available' }
+    ]
+  };
+
+  let currentLocation = 'NGE';
+  let selectedSlot = null;
+
+  function renderSlots(location) {
+    const grid = document.getElementById('parkingGrid');
+    grid.innerHTML = '';
+
+    const slots = parkingData[location] || [];
+    let filledCount = 0;
+    let emptyCount = 0;
+
+    slots.forEach(slotData => {
+      // Count filled (unavailable) and empty (available) half-sections
+      if (slotData.left === 'unavailable') filledCount++;
+      else emptyCount++;
+      if (slotData.right === 'unavailable') filledCount++;
+      else emptyCount++;
+
+      const slot = document.createElement('div');
+      const selectedClass = slotData.slot === 5 && location === 'NGE' ? ' selected' : '';
+      slot.className = `parking-slot${selectedClass}`;
+
+      const capacityHTML = slotData.capacity ? slotData.capacity : '';
+      slot.innerHTML = `
+        <div class="slot-part ${slotData.left}">
+          <span class="slot-number">${slotData.slot}</span>
+        </div>
+        <div class="slot-part ${slotData.right}">
+          ${capacityHTML ? `<span class="slot-number">${capacityHTML}</span>` : ''}
+        </div>
+      `;
+      slot.addEventListener('click', () => openSlotModal(location, slotData.slot, slotData.left));
+      grid.appendChild(slot);
+    });
+
+    // Update counters with current location's counts
+    document.getElementById('filledCount').textContent = filledCount;
+    document.getElementById('emptyCount').textContent = emptyCount;
+  }
+
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      currentLocation = this.dataset.location;
+      renderSlots(currentLocation);
+    });
+  });
+
+  const profileTrigger = document.getElementById('profileTrigger');
+  const accountModal = document.getElementById('accountModal');
+  const closeAccountModal = document.getElementById('closeAccountModal');
+
+  profileTrigger.addEventListener('click', () => accountModal.classList.add('show'));
+  closeAccountModal.addEventListener('click', () => accountModal.classList.remove('show'));
+  accountModal.addEventListener('click', (e) => {
+    if (e.target === accountModal) accountModal.classList.remove('show');
+  });
+
+  const slotModal = document.getElementById('slotModal');
+  const closeSlotModal = document.getElementById('closeSlotModal');
+  const availableBtn = document.getElementById('availableBtn');
+  const unavailableBtn = document.getElementById('unavailableBtn');
+
+  function openSlotModal(location, slotNumber, status) {
+    selectedSlot = { location, slotNumber, status };
+    slotModal.classList.add('show');
+
+    if (status === 'available') {
+      availableBtn.classList.add('active');
+      unavailableBtn.classList.remove('active');
+    } else {
+      unavailableBtn.classList.add('active');
+      availableBtn.classList.remove('active');
+    }
+  }
+
+  closeSlotModal.addEventListener('click', () => slotModal.classList.remove('show'));
+  slotModal.addEventListener('click', (e) => {
+    if (e.target === slotModal) slotModal.classList.remove('show');
+  });
+
+  availableBtn.addEventListener('click', function() {
+    availableBtn.classList.add('active');
+    unavailableBtn.classList.remove('active');
+  });
+
+  unavailableBtn.addEventListener('click', function() {
+    unavailableBtn.classList.add('active');
+    availableBtn.classList.remove('active');
+  });
+
+  document.getElementById('saveChanges').addEventListener('click', function() {
+    if (selectedSlot) {
+      const newStatus = availableBtn.classList.contains('active') ? 'available' : 'unavailable';
+      const slotIndex = parkingData[selectedSlot.location].findIndex(s => s.slot === selectedSlot.slotNumber);
+      if (slotIndex !== -1) {
+        parkingData[selectedSlot.location][slotIndex].left = newStatus;
+        parkingData[selectedSlot.location][slotIndex].right = newStatus;
+        renderSlots(currentLocation);
+      }
+    }
+    slotModal.classList.remove('show');
+  });
+
+  document.getElementById('deleteSlot').addEventListener('click', () => {
+    alert('Delete functionality would be implemented here');
+  });
+
+  // Initial render
+  renderSlots(currentLocation);
+</script>
+{% endblock %}
