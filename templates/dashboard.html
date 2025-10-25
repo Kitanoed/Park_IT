@@ -34,48 +34,12 @@
     padding:18px 18px 26px;
   }
 
-  /* Title bar with dots, PARKIT! centered, and Logout on the right */
-  .titlebar{
-    min-height:56px;
-    background:#fff;
-    border:1px solid var(--border);
-    border-radius:12px;
-    display:grid;
-    grid-template-columns: 120px 1fr 140px; /* dots | brand | logout */
-    align-items:center;
-    padding: 0 14px;
-    box-shadow:0 1px 2px rgba(0,0,0,.04);
-  }
-  .dots{display:flex;gap:8px;align-items:center}
-  .dot{width:12px;height:12px;border-radius:50%}
-  .dot.red{background:var(--win-red)}
-  .dot.yellow{background:var(--win-yellow)}
-  .dot.green{background:var(--win-green)}
-
-  .brandline{
-    display:flex; align-items:center; justify-content:center;
-  }
-  .park{
-    font-family: Montserrat, sans-serif; font-weight:800; letter-spacing:.2px;
-    font-size:18px; line-height:1;
-  }
-  .park .p1{ color:var(--brand-red); }
-  .park .p2{ color:#ffb400; }
-
-  .logout-wrap{display:flex; justify-content:flex-end;}
-  .logout-btn{
-    height:36px; padding:0 14px; border-radius:10px; border:1px solid transparent;
-    font-weight:700; color:#fff; cursor:pointer;
-    background: linear-gradient(135deg,var(--brand-red) 0%, var(--brand-orange) 100%);
-  }
-  .logout-btn:hover{ filter:brightness(1.05); }
-
   /* Grid app layout */
   .app{
     display:grid;
     grid-template-columns: 270px 1fr;
-    gap:14px; margin-top:14px;
-    min-height: calc(100vh - 120px);
+    gap:14px;
+    min-height: calc(100vh - 80px);
   }
 
   /* Sidebar */
@@ -83,16 +47,38 @@
     background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;
     display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);
   }
+
+  /* Brand section with dots and ParkIT! */
   .brand{
-    display:flex;align-items:center;gap:10px;padding-bottom:10px;border-bottom:1px solid var(--border)
+    padding-bottom:10px;border-bottom:1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
-  .mark{
-    width:40px;height:40px;border-radius:10px;background:#fff5f5;
-    display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--brand-red)
+
+  /* Three dots - horizontal */
+  .dots-container{
+    display:flex;
+    gap:6px;
+    align-items:center;
   }
-  .txt{line-height:1.1}
-  .txt .t1{font-weight:800;color:var(--text)}
-  .txt .t2{font-weight:600;color:var(--muted);font-size:12px}
+  .dot{width:10px;height:10px;border-radius:50%}
+  .dot.red{background:var(--win-red)}
+  .dot.yellow{background:var(--win-yellow)}
+  .dot.green{background:var(--win-green)}
+
+  /* ParkIT! branding */
+  .txt{line-height:1.1;}
+  .park-brand{
+    font-family: Montserrat, sans-serif;
+    font-weight:800;
+    letter-spacing:.2px;
+    font-size:17px;
+    line-height:1;
+  }
+  .park-brand .p1{ color:var(--brand-red); }
+  .park-brand .p2{ color:#ffb400; }
+  .txt .t2{font-weight:600;color:var(--muted);font-size:11px; margin-top:2px;}
 
   .nav{display:flex;flex-direction:column;gap:10px;margin-top:8px}
   .nav a{
@@ -110,13 +96,144 @@
     display:flex;align-items:center;justify-content:center;color:#6b7280;font-weight:700;
   }
   .spacer{flex:1}
+
+  /* Profile section */
   .profile{
     padding:12px;border:1px solid var(--border);border-radius:12px;background:#fff;
     display:flex;align-items:center;gap:10px;
+    cursor:pointer;
+    transition: all 0.2s;
+  }
+  .profile:hover{
+    border-color:var(--brand-red);
+    background:#fff5f5;
   }
   .avatar{width:30px;height:30px;border-radius:50%;background:#f3f4f6}
   .nm{font-weight:600;font-size:12px;color:var(--text)}
   .em{font-size:11px;color:var(--muted)}
+
+  /* Modal overlay */
+  .modal-overlay{
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  .modal-overlay.show{
+    display: flex;
+  }
+
+  /* Account Modal */
+  .account-modal{
+    background: #fff;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 420px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    position: relative;
+  }
+
+  .modal-header{
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .modal-title{
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+  }
+
+  .close-btn{
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s;
+  }
+
+  .close-btn:hover{
+    background: var(--border);
+    color: var(--text);
+  }
+
+  .modal-body{
+    padding: 24px;
+  }
+
+  .form-field{
+    margin-bottom: 20px;
+  }
+
+  .form-field:last-child{
+    margin-bottom: 0;
+  }
+
+  .field-label{
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+
+  .field-input{
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--text);
+    background: #f8f9fa;
+    font-family: inherit;
+  }
+
+  .field-input:focus{
+    outline: none;
+    border-color: var(--brand-red);
+    background: #fff;
+  }
+
+  .modal-footer{
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .logout-btn-modal{
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    background: linear-gradient(135deg,var(--brand-red) 0%, var(--brand-orange) 100%);
+    color: #fff;
+    transition: all 0.2s;
+  }
+
+  .logout-btn-modal:hover{
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+  }
 
   /* Main canvas */
   .main{
@@ -164,36 +281,20 @@
 </style>
 
 <div class="dashboard-wrap">
-  <!-- Title bar: dots | PARKIT! | Logout -->
-  <div class="titlebar">
-    <div class="dots">
-      <span class="dot red"></span>
-      <span class="dot yellow"></span>
-      <span class="dot green"></span>
-    </div>
-
-    <div class="brandline">
-      <div class="park">
-        <span class="p1">Park</span><span class="p2">IT!</span>
-      </div>
-    </div>
-
-    <div class="logout-wrap">
-      <form method="post" action="{% url 'logout' %}">
-        {% csrf_token %}
-        <button type="submit" class="logout-btn">Logout</button>
-      </form>
-    </div>
-  </div>
-
   <div class="app">
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="brand">
-        <div class="mark">PI</div>
+        <div class="dots-container">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
         <div class="txt">
-          <div class="t1">ParkIT Online</div>
-          <div class="t2">Admin</div>
+          <div class="park-brand">
+            <span class="p1">Park</span><span class="p2">IT!</span>
+          </div>
+          <div class="t2">Online</div>
         </div>
       </div>
 
@@ -211,11 +312,11 @@
 
       <div class="spacer"></div>
 
-      <div class="profile">
+      <div class="profile" id="profileTrigger">
         <div class="avatar"></div>
         <div>
-          <div class="nm">Admin Name</div>
-          <div class="em">admin email</div>
+          <div class="nm">{{ full_name|default:"User Name" }}</div>
+          <div class="em">{{ email|default:"user email" }}</div>
         </div>
       </div>
     </aside>
@@ -416,4 +517,62 @@
     </section>
   </div>
 </div>
+
+<!-- Account Modal -->
+<div class="modal-overlay" id="accountModal">
+  <div class="account-modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Account</h3>
+      <button class="close-btn" id="closeModal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-field">
+        <label class="field-label">Full Name</label>
+        <input type="text" class="field-input" value="{{ full_name|default:'User Name' }}" readonly>
+      </div>
+      <div class="form-field">
+        <label class="field-label">Username</label>
+        <input type="text" class="field-input" value="{{ username|default:'username' }}" readonly>
+      </div>
+      <div class="form-field">
+        <label class="field-label">Email</label>
+        <input type="email" class="field-input" value="{{ email|default:'user@email.com' }}" readonly>
+      </div>
+      <div class="form-field">
+        <label class="field-label">Password</label>
+        <input type="password" class="field-input" value="********" readonly>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <form method="post" action="{% url 'logout' %}" style="margin:0;">
+        {% csrf_token %}
+        <button type="submit" class="logout-btn-modal">Logout</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Get modal elements
+  const profileTrigger = document.getElementById('profileTrigger');
+  const accountModal = document.getElementById('accountModal');
+  const closeModal = document.getElementById('closeModal');
+
+  // Open modal when clicking profile
+  profileTrigger.addEventListener('click', function() {
+    accountModal.classList.add('show');
+  });
+
+  // Close modal when clicking X button
+  closeModal.addEventListener('click', function() {
+    accountModal.classList.remove('show');
+  });
+
+  // Close modal when clicking outside
+  accountModal.addEventListener('click', function(e) {
+    if (e.target === accountModal) {
+      accountModal.classList.remove('show');
+    }
+  });
+</script>
 {% endblock %}
