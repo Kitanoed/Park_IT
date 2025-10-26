@@ -1,7 +1,8 @@
 # Park_IT/Park_IT/urls.py
 from django.contrib import admin
 from django.urls import path
-from .views import HomeView, RegisterView, LoginView, logout_view, SignInView, DashboardView, ParkingSpacesView
+from .views import HomeView, RegisterView, LoginView, logout_view, SignInView, DashboardView, ParkingSpacesView, \
+    ManageUsersView
 from django.views.generic import RedirectView
 
 urlpatterns = [
