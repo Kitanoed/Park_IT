@@ -151,3 +151,43 @@ class DashboardView(View):
             }
 
         return render(request, 'dashboard.html', context)
+
+
+class ParkingSpacesView(View):
+    def get(self, request):
+        if 'access_token' not in request.session:
+            messages.error(request, 'Please log in first.')
+            return redirect('signin', portal='student')
+
+        user_id = request.session.get('user_id')
+
+        # Fetch user data from Supabase
+        user_response = supabase.table('users').select('first_name, last_name, email, student_employee_id, role_id').eq(
+            'id', user_id).execute()
+
+        if user_response.data:
+            user_data = user_response.data[0]
+            role_id = user_data['role_id']
+
+            # Get role name
+            role_response = supabase.table('roles').select('role_name').eq('role_id', role_id).execute()
+            role_name = role_response.data[0]['role_name'] if role_response.data else 'student'
+
+            # Create context with user information
+            context = {
+                'role': role_name,
+                'full_name': f"{user_data['first_name']} {user_data['last_name']}",
+                'first_name': user_data['first_name'],
+                'last_name': user_data['last_name'],
+                'email': user_data['email'],
+                'username': user_data['student_employee_id'],
+            }
+        else:
+            context = {
+                'role': 'student',
+                'full_name': 'User',
+                'email': 'No email',
+                'username': 'No username'
+            }
+
+        return render(request, 'parking_spaces.html', context)
