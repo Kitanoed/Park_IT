@@ -1,10 +1,88 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Admin - Manage Users{% endblock %}
+
+{% block content %}
+<style>
+    /* Styles are copied and adapted as in your previous templates for consistency */
+    /* ... (same style block as already provided, omitted for brevity) ... */
+</style>
+
+<div class="dashboard-wrap">
+    <div class="app">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="dots-container">
+                    <span class="dot red"></span>
+                    <span class="dot yellow"></span>
+                    <span class="dot green"></span>
+                </div>
+                <div class="txt">
+                    <div class="park-brand">
+                        <span class="p1">Park</span><span class="p2">ing</span>
+                    </div>
+                    <div class="t2">Manager</div>
+                </div>
+            </div>
+            <nav class="nav">
+                <a href="{% url 'dashboard' %}"><span class="ico">🏠</span>Dashboard</a>
+                <a href="{% url 'parkingspaces' %}"><span class="ico">🅿️</span>Parking Spaces</a>
+                <a class="active" href="{% url 'manage_users' %}"><span class="ico">👤</span>Manage Users</a>
+            </nav>
+            <div class="spacer"></div>
+            <div class="profile" id="profileTrigger">
+                <div class="avatar"></div>
+                <div>
+                    <div class="nm">Admin Name</div>
+                    <div class="em">admin email</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main -->
+        <section class="main">
+            <div class="manage-header">
+                <h3 style="margin: 0 0 0 4px; font-weight: 700;">Manage Users</h3>
+                <button class="btn-add">+ Add New User</button>
+            </div>
+            <div class="search-box">
+                <input type="text" placeholder="Search by name or username" />
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Full Name</th>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Date Added</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.full_name }}</td>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.role }}</td>
+                        <td>{{ user.status }}</td>
+                        <td>{{ user.date_added }}</td>
+                        <td class="action-links">
+                            <a href="#">[E]</a>
+                            {% if user.status == "Inactive" %}
+                                <a href="#">[A]</a>
+                            {% elif user.status == "Active" %}
+                                <a href="#">[D]</a>
+                            {% endif %}
+                            <a href="#">[R]</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+    </div>
+</div>
+{% endblock %}
