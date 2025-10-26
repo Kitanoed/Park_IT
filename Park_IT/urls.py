@@ -13,4 +13,5 @@ urlpatterns = [
     path('logout/', logout_view, name='logout'),
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('parking-spaces/', ParkingSpacesView.as_view(), name='parking_spaces'),
+    path("manage-users/", ManageUsersView.as_view(), name="manage_users"),
 ]
