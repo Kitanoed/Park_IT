@@ -202,16 +202,25 @@ class DashboardView(View):
             messages.error(request, 'Please log in first.')
             return redirect('signin', portal='student')
 
-        user_id = request.session.get('user_id')
-        user_response = supabase.table('users').select('first_name, last_name, email, student_employee_id, role_id').eq('id', user_id).execute()
+        try:
+            user_id = request.session.get('user_id')
+            user_response = supabase.table('users').select('first_name, last_name, email, student_employee_id, role_id').eq('id', user_id).execute()
 
-        if not user_response.data:
-            messages.error(request, 'User not found.')
+            if not user_response.data:
+                messages.error(request, 'User not found.')
+                return redirect('home')
+
+            user_data = user_response.data[0]
+            role_response = supabase.table('roles').select('role_name').eq('role_id', user_data['role_id']).execute()
+            role_name = role_response.data[0]['role_name'] if role_response.data else 'student'
+        except ValueError as e:
+            # Supabase credentials not configured
+            messages.error(request, 'Server configuration error. Please contact administrator.')
             return redirect('home')
-
-        user_data = user_response.data[0]
-        role_response = supabase.table('roles').select('role_name').eq('role_id', user_data['role_id']).execute()
-        role_name = role_response.data[0]['role_name'] if role_response.data else 'student'
+        except Exception as e:
+            # Other Supabase errors
+            messages.error(request, f'Database error: {str(e)}')
+            return redirect('home')
 
         # Only allow admins to access this dashboard
         if role_name != 'admin':
@@ -233,22 +242,36 @@ class ParkingSpacesView(View):
         if 'access_token' not in request.session:
             messages.error(request, 'Please log in first.')
             return redirect('signin', portal='student')
-        user_id = request.session.get('user_id')
-        user_response = supabase.table('users').select('first_name, last_name, email, student_employee_id, role_id').eq('id', user_id).execute()
-        if user_response.data:
-            user_data = user_response.data[0]
-            role_id = user_data['role_id']
-            role_response = supabase.table('roles').select('role_name').eq('role_id', role_id).execute()
-            role_name = role_response.data[0]['role_name'] if role_response.data else 'student'
-            context = {
-                'role': role_name,
-                'full_name': f"{user_data['first_name']} {user_data['last_name']}",
-                'first_name': user_data['first_name'],
-                'last_name': user_data['last_name'],
-                'email': user_data['email'],
-                'username': user_data['student_employee_id'],
-            }
-        else:
+        try:
+            user_id = request.session.get('user_id')
+            user_response = supabase.table('users').select('first_name, last_name, email, student_employee_id, role_id').eq('id', user_id).execute()
+            if user_response.data:
+                user_data = user_response.data[0]
+                role_id = user_data['role_id']
+                role_response = supabase.table('roles').select('role_name').eq('role_id', role_id).execute()
+                role_name = role_response.data[0]['role_name'] if role_response.data else 'student'
+                context = {
+                    'role': role_name,
+                    'full_name': f"{user_data['first_name']} {user_data['last_name']}",
+                    'first_name': user_data['first_name'],
+                    'last_name': user_data['last_name'],
+                    'email': user_data['email'],
+                    'username': user_data['student_employee_id'],
+                }
+            else:
+                context = {
+                    'role': 'student',
+                    'full_name': 'User',
+                    'email': 'No email',
+                    'username': 'No username'
+                }
+        except ValueError as e:
+            # Supabase credentials not configured
+            messages.error(request, 'Server configuration error. Please contact administrator.')
+            return redirect('home')
+        except Exception as e:
+            # Other Supabase errors
+            messages.error(request, f'Database error: {str(e)}')
             context = {
                 'role': 'student',
                 'full_name': 'User',
