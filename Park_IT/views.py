@@ -282,6 +282,35 @@ class ParkingSpacesView(View):
 
 class ManageUsersView(View):
     def get(self, request):
+        if 'access_token' not in request.session:
+            messages.error(request, 'Please log in first.')
+            return redirect('signin', portal='student')
+
+        try:
+            user_id = request.session.get('user_id')
+            user_response = supabase.table('users').select('first_name, last_name, email, student_employee_id, role_id').eq('id', user_id).execute()
+
+            if not user_response.data:
+                messages.error(request, 'User not found.')
+                return redirect('home')
+
+            user_data = user_response.data[0]
+            role_response = supabase.table('roles').select('role_name').eq('role_id', user_data['role_id']).execute()
+            role_name = role_response.data[0]['role_name'] if role_response.data else 'student'
+        except ValueError as e:
+            # Supabase credentials not configured
+            messages.error(request, 'Server configuration error. Please contact administrator.')
+            return redirect('home')
+        except Exception as e:
+            # Other Supabase errors
+            messages.error(request, f'Database error: {str(e)}')
+            return redirect('home')
+
+        # Only allow admins to access this page
+        if role_name != 'admin':
+            messages.error(request, 'Access denied. Admins only.')
+            return redirect('home')
+
         # Example user list for template demonstration
         users = [
             {
@@ -306,4 +335,14 @@ class ManageUsersView(View):
                 "date_added": "09/17/2025",
             }
         ]
-        return render(request, 'manage_users.html', {'users': users})
+
+        context = {
+            'users': users,
+            'role': role_name,
+            'full_name': f"{user_data['first_name']} {user_data['last_name']}",
+            'first_name': user_data['first_name'],
+            'last_name': user_data['last_name'],
+            'email': user_data['email'],
+            'username': user_data['student_employee_id'],
+        }
+        return render(request, 'manage_users.html', context)

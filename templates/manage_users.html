@@ -28,15 +28,15 @@
             </div>
             <nav class="nav">
                 <a href="{% url 'dashboard' %}"><span class="ico">🏠</span>Dashboard</a>
-                <a href="{% url 'parkingspaces' %}"><span class="ico">🅿️</span>Parking Spaces</a>
+                <a href="{% url 'parking_spaces' %}"><span class="ico">🅿️</span>Parking Spaces</a>
                 <a class="active" href="{% url 'manage_users' %}"><span class="ico">👤</span>Manage Users</a>
             </nav>
             <div class="spacer"></div>
             <div class="profile" id="profileTrigger">
                 <div class="avatar"></div>
                 <div>
-                    <div class="nm">Admin Name</div>
-                    <div class="em">admin email</div>
+                    <div class="nm">{{ full_name|default:"User Name" }}</div>
+                    <div class="em">{{ email|default:"user email" }}</div>
                 </div>
             </div>
         </aside>
