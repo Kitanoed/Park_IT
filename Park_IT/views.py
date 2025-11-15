@@ -113,10 +113,15 @@ class LoginView(View):
         id_input = form.cleaned_data['id']
         password = form.cleaned_data['password']
 
-        user_resp = supabase.table('users')\
-            .select('email, role_id')\
-            .eq('student_employee_id', id_input)\
-            .execute()
+        try:
+            user_resp = supabase.table('users')\
+                .select('email, role_id')\
+                .eq('student_employee_id', id_input)\
+                .execute()
+        except Exception as e:
+            messages.error(request, f'Error connecting to database: {str(e)}')
+            tmpl = f'signin_{portal}.html' if portal in ['admin', 'student'] else 'signin.html'
+            return render(request, tmpl, {'form': form})
 
         if not user_resp.data:
             messages.error(request, 'ID not found.')
@@ -126,13 +131,20 @@ class LoginView(View):
         email   = user_resp.data[0]['email']
         role_id = user_resp.data[0]['role_id']
 
-
-        auth_resp = supabase.auth.sign_in_with_password(
-            {"email": email, "password": password}
-        )
+        try:
+            auth_resp = supabase.auth.sign_in_with_password(
+                {"email": email, "password": password}
+            )
+        except Exception as e:
+            messages.error(request, f'Authentication error: {str(e)}')
+            tmpl = f'signin_{portal}.html' if portal in ['admin', 'student'] else 'signin.html'
+            return render(request, tmpl, {'form': form})
 
         if not auth_resp.session:
-            messages.error(request, 'Invalid credentials.')
+            error_msg = 'Invalid credentials.'
+            if hasattr(auth_resp, 'error') and auth_resp.error:
+                error_msg = auth_resp.error.message or error_msg
+            messages.error(request, error_msg)
             tmpl = f'signin_{portal}.html' if portal in ['admin', 'student'] else 'signin.html'
             return render(request, tmpl, {'form': form})
 
@@ -141,10 +153,15 @@ class LoginView(View):
         request.session['user_id']      = auth_resp.user.id
 
 
-        role_resp = supabase.table('roles')\
-            .select('role_name')\
-            .eq('role_id', role_id)\
-            .execute()
+        try:
+            role_resp = supabase.table('roles')\
+                .select('role_name')\
+                .eq('role_id', role_id)\
+                .execute()
+        except Exception as e:
+            messages.error(request, f'Error fetching role: {str(e)}')
+            tmpl = f'signin_{portal}.html' if portal in ['admin', 'student'] else 'signin.html'
+            return render(request, tmpl, {'form': form})
 
         role_name = role_resp.data[0]['role_name'] if role_resp.data else 'student'
 
@@ -161,9 +178,17 @@ class LoginView(View):
             messages.error(request, 'Please use the Academic Portal to log in.')
             return redirect('signin', portal='student')
 
+        # Store role in session for later use
+        request.session['role_name'] = role_name
 
         messages.success(request, 'Login successful!')
-        return redirect('dashboard')
+        
+        # Redirect based on role
+        if role_name == 'admin':
+            return redirect('dashboard')
+        else:
+            # Students and other roles go to parking spaces
+            return redirect('parking_spaces')
 
 def logout_view(request):
     supabase.auth.sign_out()
