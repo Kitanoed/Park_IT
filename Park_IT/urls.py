@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import path
 from .views import (
     HomeView, RegisterView, LoginView, logout_view,
-    SignInView, DashboardView, ParkingSpacesView, ManageUsersView
+    SignInView, DashboardView, ParkingSpacesView, ManageUsersView, UserDashboardView
 )
 
 urlpatterns = [
@@ -13,6 +13,7 @@ urlpatterns = [
     path('signin/<str:portal>/', LoginView.as_view(), name='signin'),
     path('logout/', logout_view, name='logout'),
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
+    path('user-dashboard/', UserDashboardView.as_view(), name='user_dashboard'),
     path('parking-spaces/', ParkingSpacesView.as_view(), name='parking_spaces'),
     path("manage-users/", ManageUsersView.as_view(), name="manage_users"),
 ]
