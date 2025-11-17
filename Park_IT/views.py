@@ -188,7 +188,7 @@ class LoginView(View):
             return redirect('dashboard')
         else:
             # Students and other roles go to parking spaces
-            return redirect('parking_spaces')
+            return redirect('user_dashboard')
 
 def logout_view(request):
     supabase.auth.sign_out()
@@ -236,6 +236,50 @@ class DashboardView(View):
             'username': user_data['student_employee_id'],
         }
         return render(request, 'dashboard.html', context)
+
+class UserDashboardView(View):
+    def get(self, request):
+        if 'access_token' not in request.session:
+            messages.error(request, 'Please log in first.')
+            return redirect('signin', portal='student')
+
+        try:
+            user_id = request.session.get('user_id')
+            user_response = supabase.table('users').select(
+                'first_name, last_name, email, student_employee_id, role_id'
+            ).eq('id', user_id).execute()
+
+            if not user_response.data:
+                messages.error(request, 'User not found.')
+                return redirect('home')
+
+            user_data = user_response.data[0]
+
+            # Fetch role
+            role_response = supabase.table('roles').select('role_name').eq(
+                'role_id', user_data['role_id']
+            ).execute()
+
+            role_name = role_response.data[0]['role_name'] if role_response.data else 'student'
+
+            # Prevent admin from entering student dashboard
+            if role_name == 'admin':
+                return redirect('dashboard')
+
+            context = {
+                'role': role_name,
+                'full_name': f"{user_data['first_name']} {user_data['last_name']}",
+                'first_name': user_data['first_name'],
+                'last_name': user_data['last_name'],
+                'email': user_data['email'],
+                'username': user_data['student_employee_id'],
+            }
+
+        except Exception as e:
+            messages.error(request, f'Error loading dashboard: {str(e)}')
+            return redirect('home')
+
+        return render(request, 'user_dashboard.html', context)
 
 class ParkingSpacesView(View):
     def get(self, request):
