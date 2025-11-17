@@ -84,16 +84,16 @@ WSGI_APPLICATION = 'Park_IT.wsgi.application'
 # Use DATABASE_URL from Render, fallback to SQLite locally
 # Only use DATABASE_URL if we're actually on Render (not local dev)
 # Render automatically sets the RENDER environment variable
-IS_RENDER = os.getenv('RENDER') is not None
+IS_RENDER = os.getenv('RENDER_SERVICE_ID') is not None
 DATABASE_URL = os.getenv('DATABASE_URL')
 
 if IS_RENDER and DATABASE_URL:
-    # Production (Render) – use Supabase PostgreSQL
+    # Production (Render) – use PostgreSQL
     DATABASES = {
         'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
     }
 else:
-    # Local development – use SQLite (always, even if DATABASE_URL exists)
+    # Local development – use SQLite
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
