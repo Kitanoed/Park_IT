@@ -589,3 +589,162 @@ def deactivate_user(request, user_id):
 @require_POST
 def activate_user(request, user_id):
     return _set_user_status(request, user_id, 'active', 'User activated.')
+
+
+class AddUserView(View):
+    """Create a new user account (admin only)."""
+
+    def _require_admin(self, request):
+        if 'access_token' not in request.session:
+            messages.error(request, 'Please log in first.')
+            return None, None, redirect('signin', portal='student')
+
+        try:
+            current_user_id = request.session.get('user_id')
+            user_response = supabase.table('users').select(
+                'first_name, last_name, email, student_employee_id, role_id'
+            ).eq('id', current_user_id).execute()
+
+            if not user_response.data:
+                messages.error(request, 'User not found.')
+                return None, None, redirect('home')
+
+            current_user = user_response.data[0]
+            role_response = supabase.table('roles').select('role_name').eq(
+                'role_id', current_user['role_id']
+            ).execute()
+            role_name = role_response.data[0]['role_name'] if role_response.data else 'student'
+        except ValueError:
+            messages.error(request, 'Server configuration error. Please contact administrator.')
+            return None, None, redirect('home')
+        except Exception as e:
+            messages.error(request, f'Database error: {str(e)}')
+            return None, None, redirect('home')
+
+        if role_name != 'admin':
+            messages.error(request, 'Access denied. Admins only.')
+            return None, None, redirect('home')
+
+        return current_user, role_name, None
+
+    def get(self, request):
+        current_user, role_name, redirect_response = self._require_admin(request)
+        if redirect_response:
+            return redirect_response
+
+        try:
+            roles_resp = supabase.table('roles').select('role_id, role_name').order(
+                'role_name'
+            ).execute()
+            roles = roles_resp.data or []
+        except Exception as e:
+            messages.error(request, f'Unable to load roles: {str(e)}')
+            roles = []
+
+        context = {
+            'role': role_name,
+            'full_name': f"{current_user['first_name']} {current_user['last_name']}",
+            'first_name': current_user['first_name'],
+            'last_name': current_user['last_name'],
+            'email': current_user['email'],
+            'username': current_user['student_employee_id'],
+            'roles': roles,
+        }
+        return render(request, 'add_user.html', context)
+
+    def post(self, request):
+        current_user, role_name, redirect_response = self._require_admin(request)
+        if redirect_response:
+            return redirect_response
+
+        first_name = (request.POST.get('first_name') or '').strip()
+        last_name = (request.POST.get('last_name') or '').strip()
+        username = (request.POST.get('username') or '').strip()
+        email = (request.POST.get('email') or '').strip()
+        role_id_raw = request.POST.get('role_id')
+
+        if not first_name or not last_name or not username or not email or not role_id_raw:
+            messages.error(request, 'All fields are required.')
+            try:
+                roles_resp = supabase.table('roles').select('role_id, role_name').order(
+                    'role_name'
+                ).execute()
+                roles = roles_resp.data or []
+            except Exception:
+                roles = []
+
+            context = {
+                'role': role_name,
+                'full_name': f"{current_user['first_name']} {current_user['last_name']}",
+                'first_name': current_user['first_name'],
+                'last_name': current_user['last_name'],
+                'email': current_user['email'],
+                'username': current_user['student_employee_id'],
+                'roles': roles,
+                'form_first_name': first_name,
+                'form_last_name': last_name,
+                'form_username': username,
+                'form_email': email,
+                'form_role_id': role_id_raw,
+            }
+            return render(request, 'add_user.html', context)
+
+        try:
+            try:
+                role_id = int(role_id_raw)
+            except (TypeError, ValueError):
+                role_id = role_id_raw
+
+            # Create Supabase auth user (using username as initial password)
+            auth_resp = supabase.auth.admin.create_user({
+                "email": email,
+                "password": username,
+                "email_confirm": True,
+            })
+
+            if not getattr(auth_resp, "user", None):
+                msg = getattr(getattr(auth_resp, "error", None), "message", None) or "Failed to create auth user."
+                messages.error(request, msg)
+                return redirect('manage_users')
+
+            auth_user = auth_resp.user
+
+            # Insert into users profile table
+            supabase.table('users').insert({
+                'id': auth_user.id,
+                'first_name': first_name,
+                'last_name': last_name,
+                'email': email,
+                'student_employee_id': username,
+                'role_id': role_id,
+                'status': 'active',
+            }).execute()
+
+            messages.success(request, 'New user created successfully.')
+            return redirect('manage_users')
+        except Exception as e:
+            messages.error(request, f'Failed to create user: {str(e)}')
+
+            try:
+                roles_resp = supabase.table('roles').select('role_id, role_name').order(
+                    'role_name'
+                ).execute()
+                roles = roles_resp.data or []
+            except Exception:
+                roles = []
+
+            context = {
+                'role': role_name,
+                'full_name': f"{current_user['first_name']} {current_user['last_name']}",
+                'first_name': current_user['first_name'],
+                'last_name': current_user['last_name'],
+                'email': current_user['email'],
+                'username': current_user['student_employee_id'],
+                'roles': roles,
+                'form_first_name': first_name,
+                'form_last_name': last_name,
+                'form_username': username,
+                'form_email': email,
+                'form_role_id': role_id_raw,
+            }
+            return render(request, 'add_user.html', context)
