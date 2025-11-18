@@ -363,6 +363,41 @@
     transform: translateY(-1px);
   }
 
+  .alert-stack{
+    margin-bottom:16px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .alert-msg{
+    padding:12px 14px;
+    border-radius:12px;
+    font-size:13px;
+    font-weight:600;
+    border:1px solid transparent;
+  }
+  .alert-msg.success{
+    background:#ecfdf3;
+    border-color:#bbf7d0;
+    color:#166534;
+  }
+  .alert-msg.error,
+  .alert-msg.danger{
+    background:#fef2f2;
+    border-color:#fecaca;
+    color:#991b1b;
+  }
+  .alert-msg.warning{
+    background:#fffbeb;
+    border-color:#fde68a;
+    color:#92400e;
+  }
+  .alert-msg.info{
+    background:#eff6ff;
+    border-color:#bfdbfe;
+    color:#1e3a8a;
+  }
+
   @media (max-width: 1280px){
     .dashboard-wrap{max-width: 1240px;}
   }
@@ -416,6 +451,13 @@
 
     <!-- Main -->
     <section class="main">
+      {% if messages %}
+      <div class="alert-stack">
+        {% for message in messages %}
+          <div class="alert-msg {{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
       <div class="manage-header">
         <h3>Manage Users</h3>
         <a href="{% url 'add_user' %}" class="btn-add" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;">

@@ -85,6 +85,40 @@
     font-weight:700;
     cursor:pointer;
   }
+  .alert-stack{
+    margin-bottom:16px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .alert-msg{
+    padding:12px 14px;
+    border-radius:12px;
+    font-size:13px;
+    font-weight:600;
+    border:1px solid transparent;
+  }
+  .alert-msg.success{
+    background:#ecfdf3;
+    border-color:#bbf7d0;
+    color:#166534;
+  }
+  .alert-msg.error,
+  .alert-msg.danger{
+    background:#fef2f2;
+    border-color:#fecaca;
+    color:#991b1b;
+  }
+  .alert-msg.warning{
+    background:#fffbeb;
+    border-color:#fde68a;
+    color:#92400e;
+  }
+  .alert-msg.info{
+    background:#eff6ff;
+    border-color:#bfdbfe;
+    color:#1e3a8a;
+  }
 </style>
 
 <div class="add-user-wrap">
@@ -96,6 +130,14 @@
       </div>
     </div>
   </div>
+
+  {% if messages %}
+  <div class="alert-stack">
+    {% for message in messages %}
+      <div class="alert-msg {{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
 
   <form method="post">
     {% csrf_token %}
