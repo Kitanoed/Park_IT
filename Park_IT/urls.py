@@ -4,7 +4,8 @@ from django.contrib import admin
 from django.urls import path
 from .views import (
     HomeView, RegisterView, LoginView, logout_view,
-    SignInView, DashboardView, ParkingSpacesView, ManageUsersView, UserDashboardView
+    SignInView, DashboardView, ParkingSpacesView, ManageUsersView, UserDashboardView,
+    EditUserView, deactivate_user, activate_user,
 )
 
 urlpatterns = [
@@ -18,6 +19,9 @@ urlpatterns = [
     path('user-dashboard/', UserDashboardView.as_view(), name='user_dashboard'),
     path('parking-spaces/', ParkingSpacesView.as_view(), name='parking_spaces'),
     path("manage-users/", ManageUsersView.as_view(), name="manage_users"),
+    path("manage-users/<str:user_id>/edit/", EditUserView.as_view(), name="edit_user"),
+    path("manage-users/<str:user_id>/deactivate/", deactivate_user, name="deactivate_user"),
+    path("manage-users/<str:user_id>/activate/", activate_user, name="activate_user"),
 ]
 
 if settings.DEBUG:

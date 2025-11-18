@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Admin - Edit User{% endblock %}
+
+{% block content %}
+<style>
+  .edit-user-wrap{
+    max-width: 720px;
+    margin: 40px auto;
+    padding: 24px 24px 28px;
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 10px 25px rgba(15,23,42,0.06);
+  }
+  .edit-user-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:18px;
+  }
+  .edit-user-title{
+    font-size:18px;
+    font-weight:700;
+    color:#111827;
+  }
+  .edit-user-sub{
+    font-size:13px;
+    color:#6b7280;
+  }
+  .edit-user-form{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px 18px;
+    margin-top:10px;
+  }
+  .edit-user-form .full-row{
+    grid-column:1 / -1;
+  }
+  .edit-label{
+    display:block;
+    font-size:13px;
+    font-weight:600;
+    color:#111827;
+    margin-bottom:6px;
+  }
+  .edit-input,
+  .edit-select{
+    width:100%;
+    padding:9px 11px;
+    border-radius:10px;
+    border:1px solid #e5e7eb;
+    font-size:14px;
+    background:#f9fafb;
+  }
+  .edit-input:focus,
+  .edit-select:focus{
+    outline:none;
+    border-color:#b71c1c;
+    background:#ffffff;
+  }
+  .edit-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    margin-top:22px;
+  }
+  .btn-secondary{
+    padding:9px 16px;
+    border-radius:10px;
+    border:1px solid #e5e7eb;
+    background:#ffffff;
+    font-size:14px;
+    font-weight:600;
+    color:#374151;
+    cursor:pointer;
+  }
+  .btn-primary{
+    padding:9px 18px;
+    border-radius:10px;
+    border:none;
+    background:linear-gradient(135deg,#b71c1c 0%,#f57c00 100%);
+    color:#ffffff;
+    font-size:14px;
+    font-weight:700;
+    cursor:pointer;
+  }
+</style>
+
+<div class="edit-user-wrap">
+  <div class="edit-user-header">
+    <div>
+      <div class="edit-user-title">Edit User</div>
+      <div class="edit-user-sub">
+        Update full name, username, and role for this account.
+      </div>
+    </div>
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="edit-user-form">
+      <div>
+        <label class="edit-label">First Name</label>
+        <input
+          type="text"
+          name="first_name"
+          class="edit-input"
+          value="{{ target_user.first_name }}"
+          required
+        />
+      </div>
+      <div>
+        <label class="edit-label">Last Name</label>
+        <input
+          type="text"
+          name="last_name"
+          class="edit-input"
+          value="{{ target_user.last_name }}"
+          required
+        />
+      </div>
+      <div class="full-row">
+        <label class="edit-label">Username (ID)</label>
+        <input
+          type="text"
+          name="username"
+          class="edit-input"
+          value="{{ target_user.student_employee_id }}"
+          required
+        />
+      </div>
+      <div class="full-row">
+        <label class="edit-label">Role</label>
+        <select name="role_id" class="edit-select" required>
+          <option value="" disabled>Select role</option>
+          {% for r in roles %}
+            <option value="{{ r.role_id }}" {% if r.role_id == target_user.role_id %}selected{% endif %}>
+              {{ r.role_name|title }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="edit-actions">
+      <a href="{% url 'manage_users' %}" class="btn-secondary">Cancel</a>
+      <button type="submit" class="btn-primary">Save Changes</button>
+    </div>
+  </form>
+</div>
+
+{% endblock %}
+
+

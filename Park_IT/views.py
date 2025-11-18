@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.views import View
+from django.views.decorators.http import require_POST
 from .forms import RegisterForm, LoginForm
 from utils import supabase
 import time
@@ -358,7 +359,7 @@ class ManageUsersView(View):
 
         try:
             users_response = supabase.table('users').select(
-                'first_name, last_name, student_employee_id, status, created_at, roles(role_name)'
+                'id, first_name, last_name, student_employee_id, status, created_at, roles(role_name)'
             ).order('created_at', desc=True).execute()
             raw_users = users_response.data or []
         except Exception as e:
@@ -387,6 +388,7 @@ class ManageUsersView(View):
             date_added = format_date(item.get('created_at'))
 
             users.append({
+                "id": item.get('id'),
                 "full_name": full_name,
                 "username": item.get('student_employee_id') or '—',
                 "role": role_label,
@@ -404,3 +406,186 @@ class ManageUsersView(View):
             'username': user_data['student_employee_id'],
         }
         return render(request, 'manage_users.html', context)
+
+
+class EditUserView(View):
+    """Edit another user's full name, username, and role (admin only)."""
+
+    def _require_admin(self, request):
+        if 'access_token' not in request.session:
+            messages.error(request, 'Please log in first.')
+            return None, None, redirect('signin', portal='student')
+
+        try:
+            current_user_id = request.session.get('user_id')
+            user_response = supabase.table('users').select(
+                'first_name, last_name, email, student_employee_id, role_id'
+            ).eq('id', current_user_id).execute()
+
+            if not user_response.data:
+                messages.error(request, 'User not found.')
+                return None, None, redirect('home')
+
+            current_user = user_response.data[0]
+            role_response = supabase.table('roles').select('role_name').eq(
+                'role_id', current_user['role_id']
+            ).execute()
+            role_name = role_response.data[0]['role_name'] if role_response.data else 'student'
+        except ValueError:
+            messages.error(request, 'Server configuration error. Please contact administrator.')
+            return None, None, redirect('home')
+        except Exception as e:
+            messages.error(request, f'Database error: {str(e)}')
+            return None, None, redirect('home')
+
+        if role_name != 'admin':
+            messages.error(request, 'Access denied. Admins only.')
+            return None, None, redirect('home')
+
+        return current_user, role_name, None
+
+    def _load_target_user_and_roles(self, user_id):
+        # Load target user
+        user_resp = supabase.table('users').select(
+            'id, first_name, last_name, student_employee_id, role_id, status'
+        ).eq('id', user_id).execute()
+
+        if not user_resp.data:
+            return None, None
+
+        target = user_resp.data[0]
+
+        # Load all possible roles
+        roles_resp = supabase.table('roles').select('role_id, role_name').order(
+            'role_name'
+        ).execute()
+        roles = roles_resp.data or []
+
+        return target, roles
+
+    def get(self, request, user_id):
+        current_user, role_name, redirect_response = self._require_admin(request)
+        if redirect_response:
+            return redirect_response
+
+        target_user, roles = self._load_target_user_and_roles(user_id)
+        if not target_user:
+            messages.error(request, 'Target user not found.')
+            return redirect('manage_users')
+
+        context = {
+            'role': role_name,
+            'full_name': f"{current_user['first_name']} {current_user['last_name']}",
+            'first_name': current_user['first_name'],
+            'last_name': current_user['last_name'],
+            'email': current_user['email'],
+            'username': current_user['student_employee_id'],
+            'target_user': target_user,
+            'roles': roles,
+        }
+        return render(request, 'edit_user.html', context)
+
+    def post(self, request, user_id):
+        current_user, role_name, redirect_response = self._require_admin(request)
+        if redirect_response:
+            return redirect_response
+
+        target_user, roles = self._load_target_user_and_roles(user_id)
+        if not target_user:
+            messages.error(request, 'Target user not found.')
+            return redirect('manage_users')
+
+        first_name = (request.POST.get('first_name') or '').strip()
+        last_name = (request.POST.get('last_name') or '').strip()
+        username = (request.POST.get('username') or '').strip()
+        role_id_raw = request.POST.get('role_id')
+
+        if not first_name or not last_name or not username or not role_id_raw:
+            messages.error(request, 'All fields are required.')
+            context = {
+                'role': role_name,
+                'full_name': f"{current_user['first_name']} {current_user['last_name']}",
+                'first_name': current_user['first_name'],
+                'last_name': current_user['last_name'],
+                'email': current_user['email'],
+                'username': current_user['student_employee_id'],
+                'target_user': target_user,
+                'roles': roles,
+            }
+            return render(request, 'edit_user.html', context)
+
+        try:
+            try:
+                role_id = int(role_id_raw)
+            except (TypeError, ValueError):
+                role_id = role_id_raw
+
+            supabase.table('users').update({
+                'first_name': first_name,
+                'last_name': last_name,
+                'student_employee_id': username,
+                'role_id': role_id,
+            }).eq('id', user_id).execute()
+
+            messages.success(request, 'User updated successfully.')
+            return redirect('manage_users')
+        except Exception as e:
+            messages.error(request, f'Failed to update user: {str(e)}')
+            context = {
+                'role': role_name,
+                'full_name': f"{current_user['first_name']} {current_user['last_name']}",
+                'first_name': current_user['first_name'],
+                'last_name': current_user['last_name'],
+                'email': current_user['email'],
+                'username': current_user['student_employee_id'],
+                'target_user': target_user,
+                'roles': roles,
+            }
+            return render(request, 'edit_user.html', context)
+
+
+def _set_user_status(request, user_id, new_status, success_message):
+    if 'access_token' not in request.session:
+        messages.error(request, 'Please log in first.')
+        return redirect('signin', portal='student')
+
+    try:
+        current_user_id = request.session.get('user_id')
+        user_response = supabase.table('users').select(
+            'role_id'
+        ).eq('id', current_user_id).execute()
+
+        if not user_response.data:
+            messages.error(request, 'User not found.')
+            return redirect('home')
+
+        current_user = user_response.data[0]
+        role_response = supabase.table('roles').select('role_name').eq(
+            'role_id', current_user['role_id']
+        ).execute()
+        role_name = role_response.data[0]['role_name'] if role_response.data else 'student'
+    except Exception as e:
+        messages.error(request, f'Database error: {str(e)}')
+        return redirect('home')
+
+    if role_name != 'admin':
+        messages.error(request, 'Access denied. Admins only.')
+        return redirect('home')
+
+    try:
+        supabase.table('users').update({'status': new_status}).eq('id', user_id).execute()
+        messages.success(request, success_message)
+    except Exception as e:
+        messages.error(request, f'Failed to update user status: {str(e)}')
+
+    return redirect('manage_users')
+
+
+@require_POST
+def deactivate_user(request, user_id):
+    return _set_user_status(request, user_id, 'inactive', 'User deactivated.')
+
+
+@require_POST
+def activate_user(request, user_id):
+    return _set_user_status(request, user_id, 'active', 'User activated.')

@@ -341,6 +341,28 @@
     transform: translateY(-1px);
   }
 
+  .action-links form{
+    display: inline;
+  }
+
+  .action-links button{
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--text);
+    font-weight: 600;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .action-links button:hover{
+    border-color: var(--brand-red);
+    color: var(--brand-red);
+    transform: translateY(-1px);
+  }
+
   @media (max-width: 1280px){
     .dashboard-wrap{max-width: 1240px;}
   }
@@ -421,11 +443,17 @@
             <td>{{ user.status }}</td>
             <td>{{ user.date_added }}</td>
             <td class="action-links">
-              <a href="#">[E]</a>
+              <a href="{% url 'edit_user' user.id %}">[E]</a>
               {% if user.status == "Inactive" %}
-                <a href="#">[A]</a>
+                <form method="post" action="{% url 'activate_user' user.id %}">
+                  {% csrf_token %}
+                  <button type="submit">[A]</button>
+                </form>
               {% elif user.status == "Active" %}
-                <a href="#">[D]</a>
+                <form method="post" action="{% url 'deactivate_user' user.id %}">
+                  {% csrf_token %}
+                  <button type="submit">[D]</button>
+                </form>
               {% endif %}
               <a href="#">[R]</a>
             </td>
