@@ -191,75 +191,79 @@
     box-shadow:0 1px 2px rgba(0,0,0,.04);padding:20px;
   }
 
-  /* Parking Grid - 3 columns with proper row spacing */
   .parking-grid{
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px 8px;
-    max-width: 900px;
+    display:grid;
+    grid-template-columns: repeat(auto-fill,minmax(150px,1fr));
+    gap:12px;
   }
 
   .parking-slot{
-    height: 56px;
-    border: 2px solid var(--border);
-    border-radius: 6px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    overflow: hidden;
-    cursor: pointer;
-    transition: all 0.2s;
+    border:2px solid var(--border);
+    border-radius:10px;
+    padding:14px 12px;
+    background:#fff;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    cursor:pointer;
+    transition:all 0.2s;
+    text-align:left;
   }
 
   .parking-slot:hover{
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transform:translateY(-2px);
+    box-shadow:0 8px 18px rgba(15,23,42,0.08);
   }
 
-  .parking-slot.selected{
-    border: 3px solid #1976d2;
-    box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.2);
+  .parking-slot .slot-number{
+    font-size:16px;
+    font-weight:700;
+    color:var(--text);
   }
 
-  .slot-part{
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 15px;
-    border-right: 2px solid #fff;
+  .parking-slot .slot-status{
+    font-size:13px;
+    font-weight:600;
+    padding:4px 8px;
+    border-radius:999px;
+    width:max-content;
   }
 
-  .slot-part:last-child{
-    border-right: none;
+  .status-available{
+    border-color:#34d399;
+    background:linear-gradient(135deg,#ecfdf5,#d1fae5);
+  }
+  .status-available .slot-status{
+    background:#d1fae5;
+    color:#047857;
   }
 
-  .slot-part.available{
-    background: linear-gradient(135deg, #2fbf4a 0%, #28c840 100%);
-    color: #fff;
+  .status-occupied{
+    border-color:#f87171;
+    background:linear-gradient(135deg,#fef2f2,#fee2e2);
+  }
+  .status-occupied .slot-status{
+    background:#fee2e2;
+    color:#b91c1c;
   }
 
-  .slot-part.unavailable{
-    background: linear-gradient(135deg, #e53935 0%, #ff5f57 100%);
-    color: #fff;
+  .status-reserved{
+    border-color:#fbbf24;
+    background:linear-gradient(135deg,#fffbeb,#fef3c7);
+  }
+  .status-reserved .slot-status{
+    background:#fef3c7;
+    color:#b45309;
   }
 
-  .slot-number{
-    font-size: 15px;
-    font-weight: 700;
+  .status-unavailable{
+    border-color:#94a3b8;
+    background:linear-gradient(135deg,#f1f5f9,#e2e8f0);
   }
-
-  .status-toggle{display: flex;gap: 8px;margin-bottom: 20px;}
-
-  .status-btn{
-    flex: 1;padding: 12px;border: 2px solid var(--border);
-    background: #fff;border-radius: 8px;font-weight: 700;
-    font-size: 14px;cursor: pointer;transition: all 0.2s;
+  .status-unavailable .slot-status{
+    background:#e2e8f0;
+    color:#475569;
   }
-
-  .status-btn.available-btn{border-color: #28c840;color: #28c840;}
-  .status-btn.available-btn.active{background: #28c840;color: #fff;}
-  .status-btn.unavailable-btn{border-color: #ff5f57;color: #ff5f57;}
-  .status-btn.unavailable-btn.active{background: #ff5f57;color: #fff;}
 
   @media (max-width: 1024px){
     .app{grid-template-columns: 1fr;}
@@ -292,7 +296,7 @@
         <a class="active" href="{% url 'parking_spaces' %}">
           <span class="ico">🅿</span><span>Parking Spaces</span>
         </a>
-        <a href="#">
+        <a href="{% url 'manage_users' %}">
           <span class="ico">👥</span><span>Manage Users</span>
         </a>
       </nav>
@@ -313,29 +317,48 @@
         <div class="left-section">
           <div class="location-label">Location</div>
           <div class="location-filters">
-            <button class="filter-btn active" data-location="NGE">NGE</button>
-            <button class="filter-btn" data-location="ACAD">ACAD</button>
-            <button class="filter-btn" data-location="BC">BC</button>
-            <button class="filter-btn" data-location="GYM">GYM</button>
-            <button class="filter-btn" data-location="RTL">RTL</button>
-            <button class="filter-btn" data-location="BG">BG</button>
+            {% if lots %}
+              {% for lot in lots %}
+              <button class="filter-btn {% if lot.is_active %}active{% endif %}" data-href="?lot={{ lot.id }}">
+                {{ lot.code }}
+              </button>
+              {% endfor %}
+            {% else %}
+              <span class="counter-label">No parking lots yet.</span>
+            {% endif %}
           </div>
         </div>
 
         <div class="slot-counters">
           <div class="counter filled">
-            <span class="counter-number" id="filledCount">0</span>
+            <span class="counter-number">{{ filled_count }}</span>
             <span class="counter-label">Filled</span>
           </div>
           <div class="counter empty">
-            <span class="counter-number" id="emptyCount">0</span>
+            <span class="counter-number">{{ available_count }}</span>
             <span class="counter-label">Empty</span>
           </div>
         </div>
       </div>
 
       <section class="main">
-        <div class="parking-grid" id="parkingGrid"></div>
+        <div class="parking-grid">
+          {% if slots %}
+            {% for slot in slots %}
+            <button type="button"
+                    class="parking-slot {{ slot.status_class }}"
+                    data-slot-id="{{ slot.id }}"
+                    data-slot-number="{{ slot.slot_number|default:'—' }}"
+                    data-slot-status="{{ slot.status }}"
+                    data-update-url="{% url 'update_slot_status' slot.id %}">
+              <span class="slot-number">Slot {{ slot.slot_number|default:'—' }}</span>
+              <span class="slot-status">{{ slot.status_label }}</span>
+            </button>
+            {% endfor %}
+          {% else %}
+            <div class="empty-state">No slots configured for this lot.</div>
+          {% endif %}
+        </div>
       </section>
     </div>
   </div>
@@ -379,308 +402,86 @@
 <div class="modal-overlay" id="slotModal">
   <div class="account-modal">
     <div class="modal-header">
-      <h3 class="modal-title">Manage Slot</h3>
+      <h3 class="modal-title" id="slotModalTitle">Manage Slot</h3>
       <button class="close-btn" id="closeSlotModal">&times;</button>
     </div>
     <div class="modal-body">
       <div class="form-field">
         <label class="field-label">Slot Status</label>
-        <div class="status-toggle">
-          <button class="status-btn available-btn active" id="availableBtn">Available</button>
-          <button class="status-btn unavailable-btn" id="unavailableBtn">Unavailable</button>
-        </div>
-      </div>
-      <div class="form-field">
-        <label class="field-label">Plate Number</label>
-        <input type="text" class="field-input" id="plateNumber" placeholder="GAW1234">
-      </div>
-      <div class="form-field">
-        <label class="field-label">Date</label>
-        <input type="date" class="field-input" id="slotDate" value="2025-10-04">
-      </div>
-      <div class="form-field">
-        <label class="field-label">Time</label>
-        <input type="time" class="field-input" id="slotTime" value="09:00">
+        <select class="field-input" id="slotStatusSelect">
+          <option value="available">Available</option>
+          <option value="occupied">Occupied</option>
+          <option value="reserved">Reserved</option>
+          <option value="unavailable">Unavailable</option>
+        </select>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn-delete" id="deleteSlot">🗑</button>
       <button class="btn-save" id="saveChanges">Save Changes</button>
     </div>
   </div>
 </div>
 
+<form id="slotStatusForm" method="post" style="display:none;">
+  {% csrf_token %}
+  <input type="hidden" name="status" id="slotStatusInput">
+  <input type="hidden" name="lot_id" id="slotLotInput" value="{{ selected_lot_id }}">
+</form>
+
 <script>
-  // UNIQUE parking data for EACH location - 24 slots per location
-  const parkingData = {
-    'NGE': [
-      { slot: 1, left: 'available', right: 'available', capacity: 13 },
-      { slot: 2, left: 'unavailable', right: 'unavailable' },
-      { slot: 3, left: 'available', right: 'availabl   e' },
-      { slot: 4, left: 'available', right: 'available' },
-      { slot: 5, left: 'available', right: 'unavailable' },
-      { slot: 6, left: 'unavailable', right: 'unavailable' },
-      { slot: 7, left: 'unavailable', right: 'available' },
-      { slot: 8, left: 'available', right: 'unavailable' },
-      { slot: 9, left: 'available', right: 'unavailable' },
-      { slot: 10, left: 'unavailable', right: 'unavailable' },
-      { slot: 11, left: 'unavailable', right: 'available' },
-      { slot: 12, left: 'available', right: 'unavailable' },
-      { slot: 13, left: 'available', right: 'available' },
-      { slot: 14, left: 'unavailable', right: 'available' },
-      { slot: 15, left: 'available', right: 'unavailable' },
-      { slot: 16, left: 'unavailable', right: 'unavailable' },
-      { slot: 17, left: 'available', right: 'available' },
-      { slot: 18, left: 'available', right: 'unavailable' },
-      { slot: 19, left: 'unavailable', right: 'available' },
-      { slot: 20, left: 'available', right: 'available' },
-      { slot: 21, left: 'unavailable', right: 'unavailable' },
-      { slot: 22, left: 'available', right: 'unavailable' },
-      { slot: 23, left: 'available', right: 'available' },
-      { slot: 24, left: 'unavailable', right: 'available' }
-    ],
-    'ACAD': [
-      { slot: 1, left: 'available', right: 'unavailable' },
-      { slot: 2, left: 'available', right: 'available' },
-      { slot: 3, left: 'unavailable', right: 'unavailable' },
-      { slot: 4, left: 'available', right: 'available' },
-      { slot: 5, left: 'unavailable', right: 'available' },
-      { slot: 6, left: 'available', right: 'unavailable' },
-      { slot: 7, left: 'available', right: 'available' },
-      { slot: 8, left: 'unavailable', right: 'unavailable' },
-      { slot: 9, left: 'available', right: 'unavailable' },
-      { slot: 10, left: 'available', right: 'available' },
-      { slot: 11, left: 'unavailable', right: 'unavailable' },
-      { slot: 12, left: 'available', right: 'available' },
-      { slot: 13, left: 'unavailable', right: 'available' },
-      { slot: 14, left: 'available', right: 'unavailable' },
-      { slot: 15, left: 'unavailable', right: 'unavailable' },
-      { slot: 16, left: 'available', right: 'available' },
-      { slot: 17, left: 'unavailable', right: 'unavailable' },
-      { slot: 18, left: 'available', right: 'available' },
-      { slot: 19, left: 'available', right: 'unavailable' },
-      { slot: 20, left: 'unavailable', right: 'available' },
-      { slot: 21, left: 'available', right: 'available' },
-      { slot: 22, left: 'unavailable', right: 'unavailable' },
-      { slot: 23, left: 'available', right: 'unavailable' },
-      { slot: 24, left: 'available', right: 'available' }
-    ],
-    'BC': [
-      { slot: 1, left: 'unavailable', right: 'unavailable' },
-      { slot: 2, left: 'available', right: 'available' },
-      { slot: 3, left: 'unavailable', right: 'available' },
-      { slot: 4, left: 'available', right: 'unavailable' },
-      { slot: 5, left: 'available', right: 'available' },
-      { slot: 6, left: 'unavailable', right: 'unavailable' },
-      { slot: 7, left: 'available', right: 'unavailable' },
-      { slot: 8, left: 'available', right: 'available' },
-      { slot: 9, left: 'unavailable', right: 'available' },
-      { slot: 10, left: 'available', right: 'unavailable' },
-      { slot: 11, left: 'available', right: 'available' },
-      { slot: 12, left: 'unavailable', right: 'unavailable' },
-      { slot: 13, left: 'available', right: 'available' },
-      { slot: 14, left: 'unavailable', right: 'unavailable' },
-      { slot: 15, left: 'available', right: 'unavailable' },
-      { slot: 16, left: 'available', right: 'available' },
-      { slot: 17, left: 'unavailable', right: 'available' },
-      { slot: 18, left: 'unavailable', right: 'unavailable' },
-      { slot: 19, left: 'available', right: 'available' },
-      { slot: 20, left: 'unavailable', right: 'available' },
-      { slot: 21, left: 'available', right: 'unavailable' },
-      { slot: 22, left: 'available', right: 'available' },
-      { slot: 23, left: 'unavailable', right: 'unavailable' },
-      { slot: 24, left: 'available', right: 'available' }
-    ],
-    'GYM': [
-      { slot: 1, left: 'available', right: 'available' },
-      { slot: 2, left: 'available', right: 'unavailable' },
-      { slot: 3, left: 'unavailable', right: 'available' },
-      { slot: 4, left: 'available', right: 'available' },
-      { slot: 5, left: 'unavailable', right: 'unavailable' },
-      { slot: 6, left: 'available', right: 'available' },
-      { slot: 7, left: 'available', right: 'unavailable' },
-      { slot: 8, left: 'unavailable', right: 'available' },
-      { slot: 9, left: 'available', right: 'available' },
-      { slot: 10, left: 'available', right: 'unavailable' },
-      { slot: 11, left: 'unavailable', right: 'unavailable' },
-      { slot: 12, left: 'available', right: 'available' },
-      { slot: 13, left: 'unavailable', right: 'available' },
-      { slot: 14, left: 'available', right: 'unavailable' },
-      { slot: 15, left: 'available', right: 'available' },
-      { slot: 16, left: 'unavailable', right: 'unavailable' },
-      { slot: 17, left: 'available', right: 'available' },
-      { slot: 18, left: 'available', right: 'unavailable' },
-      { slot: 19, left: 'unavailable', right: 'available' },
-      { slot: 20, left: 'available', right: 'available' },
-      { slot: 21, left: 'unavailable', right: 'unavailable' },
-      { slot: 22, left: 'available', right: 'available' },
-      { slot: 23, left: 'available', right: 'unavailable' },
-      { slot: 24, left: 'unavailable', right: 'available' }
-    ],
-    'RTL': [
-      { slot: 1, left: 'unavailable', right: 'available' },
-      { slot: 2, left: 'available', right: 'unavailable' },
-      { slot: 3, left: 'available', right: 'available' },
-      { slot: 4, left: 'unavailable', right: 'unavailable' },
-      { slot: 5, left: 'available', right: 'available' },
-      { slot: 6, left: 'available', right: 'unavailable' },
-      { slot: 7, left: 'unavailable', right: 'available' },
-      { slot: 8, left: 'available', right: 'available' },
-      { slot: 9, left: 'unavailable', right: 'unavailable' },
-      { slot: 10, left: 'available', right: 'unavailable' },
-      { slot: 11, left: 'available', right: 'available' },
-      { slot: 12, left: 'unavailable', right: 'available' },
-      { slot: 13, left: 'available', right: 'unavailable' },
-      { slot: 14, left: 'unavailable', right: 'unavailable' },
-      { slot: 15, left: 'available', right: 'available' },
-      { slot: 16, left: 'available', right: 'unavailable' },
-      { slot: 17, left: 'unavailable', right: 'available' },
-      { slot: 18, left: 'available', right: 'available' },
-      { slot: 19, left: 'unavailable', right: 'unavailable' },
-      { slot: 20, left: 'available', right: 'available' },
-      { slot: 21, left: 'available', right: 'unavailable' },
-      { slot: 22, left: 'unavailable', right: 'available' },
-      { slot: 23, left: 'available', right: 'available' },
-      { slot: 24, left: 'unavailable', right: 'unavailable' }
-    ],
-    'BG': [
-      { slot: 1, left: 'available', right: 'unavailable' },
-      { slot: 2, left: 'unavailable', right: 'available' },
-      { slot: 3, left: 'available', right: 'available' },
-      { slot: 4, left: 'available', right: 'unavailable' },
-      { slot: 5, left: 'unavailable', right: 'unavailable' },
-      { slot: 6, left: 'available', right: 'available' },
-      { slot: 7, left: 'unavailable', right: 'available' },
-      { slot: 8, left: 'available', right: 'unavailable' },
-      { slot: 9, left: 'available', right: 'available' },
-      { slot: 10, left: 'unavailable', right: 'unavailable' },
-      { slot: 11, left: 'available', right: 'unavailable' },
-      { slot: 12, left: 'available', right: 'available' },
-      { slot: 13, left: 'unavailable', right: 'available' },
-      { slot: 14, left: 'available', right: 'unavailable' },
-      { slot: 15, left: 'unavailable', right: 'unavailable' },
-      { slot: 16, left: 'available', right: 'available' },
-      { slot: 17, left: 'available', right: 'unavailable' },
-      { slot: 18, left: 'unavailable', right: 'available' },
-      { slot: 19, left: 'available', right: 'available' },
-      { slot: 20, left: 'unavailable', right: 'unavailable' },
-      { slot: 21, left: 'available', right: 'available' },
-      { slot: 22, left: 'available', right: 'unavailable' },
-      { slot: 23, left: 'unavailable', right: 'available' },
-      { slot: 24, left: 'available', right: 'available' }
-    ]
-  };
-
-  let currentLocation = 'NGE';
-  let selectedSlot = null;
-
-  function renderSlots(location) {
-    const grid = document.getElementById('parkingGrid');
-    grid.innerHTML = '';
-
-    const slots = parkingData[location] || [];
-    let filledCount = 0;
-    let emptyCount = 0;
-
-    slots.forEach(slotData => {
-      // Count filled (unavailable) and empty (available) half-sections
-      if (slotData.left === 'unavailable') filledCount++;
-      else emptyCount++;
-      if (slotData.right === 'unavailable') filledCount++;
-      else emptyCount++;
-
-      const slot = document.createElement('div');
-      const selectedClass = slotData.slot === 5 && location === 'NGE' ? ' selected' : '';
-      slot.className = `parking-slot${selectedClass}`;
-
-      const capacityHTML = slotData.capacity ? slotData.capacity : '';
-      slot.innerHTML = `
-        <div class="slot-part ${slotData.left}">
-          <span class="slot-number">${slotData.slot}</span>
-        </div>
-        <div class="slot-part ${slotData.right}">
-          ${capacityHTML ? `<span class="slot-number">${capacityHTML}</span>` : ''}
-        </div>
-      `;
-      slot.addEventListener('click', () => openSlotModal(location, slotData.slot, slotData.left));
-      grid.appendChild(slot);
-    });
-
-    // Update counters with current location's counts
-    document.getElementById('filledCount').textContent = filledCount;
-    document.getElementById('emptyCount').textContent = emptyCount;
-  }
-
-  document.querySelectorAll('.filter-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-      this.classList.add('active');
-      currentLocation = this.dataset.location;
-      renderSlots(currentLocation);
-    });
-  });
-
   const profileTrigger = document.getElementById('profileTrigger');
   const accountModal = document.getElementById('accountModal');
   const closeAccountModal = document.getElementById('closeAccountModal');
-
   profileTrigger.addEventListener('click', () => accountModal.classList.add('show'));
   closeAccountModal.addEventListener('click', () => accountModal.classList.remove('show'));
   accountModal.addEventListener('click', (e) => {
     if (e.target === accountModal) accountModal.classList.remove('show');
   });
 
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const href = btn.dataset.href;
+      if (href) {
+        window.location = href;
+      }
+    });
+  });
+
   const slotModal = document.getElementById('slotModal');
   const closeSlotModal = document.getElementById('closeSlotModal');
-  const availableBtn = document.getElementById('availableBtn');
-  const unavailableBtn = document.getElementById('unavailableBtn');
+  const slotStatusSelect = document.getElementById('slotStatusSelect');
+  const slotModalTitle = document.getElementById('slotModalTitle');
+  const slotForm = document.getElementById('slotStatusForm');
+  const slotStatusInput = document.getElementById('slotStatusInput');
+  const slotLotInput = document.getElementById('slotLotInput');
+  let activeSlot = null;
 
-  function openSlotModal(location, slotNumber, status) {
-    selectedSlot = { location, slotNumber, status };
-    slotModal.classList.add('show');
-
-    if (status === 'available') {
-      availableBtn.classList.add('active');
-      unavailableBtn.classList.remove('active');
-    } else {
-      unavailableBtn.classList.add('active');
-      availableBtn.classList.remove('active');
-    }
-  }
-
-  closeSlotModal.addEventListener('click', () => slotModal.classList.remove('show'));
-  slotModal.addEventListener('click', (e) => {
-    if (e.target === slotModal) slotModal.classList.remove('show');
+  document.querySelectorAll('.parking-slot').forEach(slot => {
+    slot.addEventListener('click', () => {
+      activeSlot = slot;
+      slotModalTitle.textContent = `Slot ${slot.dataset.slotNumber}`;
+      slotStatusSelect.value = slot.dataset.slotStatus;
+      slotModal.classList.add('show');
+    });
   });
 
-  availableBtn.addEventListener('click', function() {
-    availableBtn.classList.add('active');
-    unavailableBtn.classList.remove('active');
-  });
-
-  unavailableBtn.addEventListener('click', function() {
-    unavailableBtn.classList.add('active');
-    availableBtn.classList.remove('active');
-  });
-
-  document.getElementById('saveChanges').addEventListener('click', function() {
-    if (selectedSlot) {
-      const newStatus = availableBtn.classList.contains('active') ? 'available' : 'unavailable';
-      const slotIndex = parkingData[selectedSlot.location].findIndex(s => s.slot === selectedSlot.slotNumber);
-      if (slotIndex !== -1) {
-        parkingData[selectedSlot.location][slotIndex].left = newStatus;
-        parkingData[selectedSlot.location][slotIndex].right = newStatus;
-        renderSlots(currentLocation);
-      }
-    }
+  closeSlotModal.addEventListener('click', () => {
     slotModal.classList.remove('show');
+    activeSlot = null;
   });
 
-  document.getElementById('deleteSlot').addEventListener('click', () => {
-    alert('Delete functionality would be implemented here');
+  slotModal.addEventListener('click', (e) => {
+    if (e.target === slotModal) {
+      slotModal.classList.remove('show');
+      activeSlot = null;
+    }
   });
 
-  // Initial render
-  renderSlots(currentLocation);
+  document.getElementById('saveChanges').addEventListener('click', () => {
+    if (!activeSlot) return;
+    slotForm.action = activeSlot.dataset.updateUrl;
+    slotStatusInput.value = slotStatusSelect.value;
+    slotForm.submit();
+  });
 </script>
 {% endblock %}

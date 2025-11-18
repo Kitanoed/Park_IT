@@ -3,6 +3,7 @@ from django.contrib import messages
 from django.views import View
 from django.views.decorators.http import require_POST
 from django.utils import timezone
+from django.urls import reverse
 from .forms import RegisterForm, LoginForm
 from utils import supabase
 import time
@@ -479,46 +480,413 @@ class UserDashboardView(View):
         return render(request, 'user_dashboard.html', context)
 
 class ParkingSpacesView(View):
+    STATUS_MAP = {
+        'available': ('Available', 'status-available'),
+        'occupied': ('Occupied', 'status-occupied'),
+        'reserved': ('Reserved', 'status-reserved'),
+        'unavailable': ('Unavailable', 'status-unavailable'),
+    }
+
+    DEFAULT_LAYOUT = {
+        'NGE': {
+            'name': 'North Gate Extension',
+            'capacity': 48,
+            'slots': [
+                {'slot_number': 1, 'left': 'available', 'right': 'available'},
+                {'slot_number': 2, 'left': 'unavailable', 'right': 'unavailable'},
+                {'slot_number': 3, 'left': 'available', 'right': 'available'},
+                {'slot_number': 4, 'left': 'available', 'right': 'available'},
+                {'slot_number': 5, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 6, 'left': 'unavailable', 'right': 'unavailable'},
+                {'slot_number': 7, 'left': 'unavailable', 'right': 'available'},
+                {'slot_number': 8, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 9, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 10, 'left': 'unavailable', 'right': 'unavailable'},
+                {'slot_number': 11, 'left': 'unavailable', 'right': 'available'},
+                {'slot_number': 12, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 13, 'left': 'available', 'right': 'available'},
+                {'slot_number': 14, 'left': 'unavailable', 'right': 'available'},
+                {'slot_number': 15, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 16, 'left': 'unavailable', 'right': 'unavailable'},
+                {'slot_number': 17, 'left': 'available', 'right': 'available'},
+                {'slot_number': 18, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 19, 'left': 'unavailable', 'right': 'available'},
+                {'slot_number': 20, 'left': 'available', 'right': 'available'},
+                {'slot_number': 21, 'left': 'unavailable', 'right': 'unavailable'},
+                {'slot_number': 22, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 23, 'left': 'available', 'right': 'available'},
+                {'slot_number': 24, 'left': 'unavailable', 'right': 'available'},
+            ],
+        },
+        'ACAD': {
+            'name': 'Academic Lot',
+            'capacity': 48,
+            'slots': [
+                {'slot_number': 1, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 2, 'left': 'available', 'right': 'available'},
+                {'slot_number': 3, 'left': 'unavailable', 'right': 'unavailable'},
+                {'slot_number': 4, 'left': 'available', 'right': 'available'},
+                {'slot_number': 5, 'left': 'unavailable', 'right': 'available'},
+                {'slot_number': 6, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 7, 'left': 'available', 'right': 'available'},
+                {'slot_number': 8, 'left': 'unavailable', 'right': 'unavailable'},
+                {'slot_number': 9, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 10, 'left': 'available', 'right': 'available'},
+                {'slot_number': 11, 'left': 'unavailable', 'right': 'unavailable'},
+                {'slot_number': 12, 'left': 'available', 'right': 'available'},
+                {'slot_number': 13, 'left': 'unavailable', 'right': 'available'},
+                {'slot_number': 14, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 15, 'left': 'unavailable', 'right': 'unavailable'},
+                {'slot_number': 16, 'left': 'available', 'right': 'available'},
+                {'slot_number': 17, 'left': 'unavailable', 'right': 'unavailable'},
+                {'slot_number': 18, 'left': 'available', 'right': 'available'},
+                {'slot_number': 19, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 20, 'left': 'unavailable', 'right': 'available'},
+                {'slot_number': 21, 'left': 'available', 'right': 'available'},
+                {'slot_number': 22, 'left': 'unavailable', 'right': 'unavailable'},
+                {'slot_number': 23, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 24, 'left': 'available', 'right': 'available'},
+            ],
+        },
+        'BC': {
+            'name': 'BC Lot',
+            'capacity': 48,
+            'slots': [
+                {'slot_number': 1, 'left': 'unavailable', 'right': 'unavailable'},
+                {'slot_number': 2, 'left': 'available', 'right': 'available'},
+                {'slot_number': 3, 'left': 'unavailable', 'right': 'available'},
+                {'slot_number': 4, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 5, 'left': 'available', 'right': 'available'},
+                {'slot_number': 6, 'left': 'unavailable', 'right': 'unavailable'},
+                {'slot_number': 7, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 8, 'left': 'available', 'right': 'available'},
+                {'slot_number': 9, 'left': 'unavailable', 'right': 'available'},
+                {'slot_number': 10, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 11, 'left': 'available', 'right': 'available'},
+                {'slot_number': 12, 'left': 'unavailable', 'right': 'unavailable'},
+                {'slot_number': 13, 'left': 'available', 'right': 'available'},
+                {'slot_number': 14, 'left': 'unavailable', 'right': 'unavailable'},
+                {'slot_number': 15, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 16, 'left': 'available', 'right': 'available'},
+                {'slot_number': 17, 'left': 'unavailable', 'right': 'available'},
+                {'slot_number': 18, 'left': 'unavailable', 'right': 'unavailable'},
+                {'slot_number': 19, 'left': 'available', 'right': 'available'},
+                {'slot_number': 20, 'left': 'unavailable', 'right': 'available'},
+                {'slot_number': 21, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 22, 'left': 'available', 'right': 'available'},
+                {'slot_number': 23, 'left': 'unavailable', 'right': 'unavailable'},
+                {'slot_number': 24, 'left': 'available', 'right': 'available'},
+            ],
+        },
+        'GYM': {
+            'name': 'Gym Lot',
+            'capacity': 48,
+            'slots': [
+                {'slot_number': 1, 'left': 'available', 'right': 'available'},
+                {'slot_number': 2, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 3, 'left': 'unavailable', 'right': 'available'},
+                {'slot_number': 4, 'left': 'available', 'right': 'available'},
+                {'slot_number': 5, 'left': 'unavailable', 'right': 'unavailable'},
+                {'slot_number': 6, 'left': 'available', 'right': 'available'},
+                {'slot_number': 7, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 8, 'left': 'unavailable', 'right': 'available'},
+                {'slot_number': 9, 'left': 'available', 'right': 'available'},
+                {'slot_number': 10, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 11, 'left': 'unavailable', 'right': 'unavailable'},
+                {'slot_number': 12, 'left': 'available', 'right': 'available'},
+                {'slot_number': 13, 'left': 'unavailable', 'right': 'available'},
+                {'slot_number': 14, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 15, 'left': 'available', 'right': 'available'},
+                {'slot_number': 16, 'left': 'unavailable', 'right': 'unavailable'},
+                {'slot_number': 17, 'left': 'available', 'right': 'available'},
+                {'slot_number': 18, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 19, 'left': 'unavailable', 'right': 'available'},
+                {'slot_number': 20, 'left': 'available', 'right': 'available'},
+                {'slot_number': 21, 'left': 'unavailable', 'right': 'unavailable'},
+                {'slot_number': 22, 'left': 'available', 'right': 'available'},
+                {'slot_number': 23, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 24, 'left': 'unavailable', 'right': 'available'},
+            ],
+        },
+        'RTL': {
+            'name': 'RTL Lot',
+            'capacity': 48,
+            'slots': [
+                {'slot_number': 1, 'left': 'unavailable', 'right': 'available'},
+                {'slot_number': 2, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 3, 'left': 'available', 'right': 'available'},
+                {'slot_number': 4, 'left': 'unavailable', 'right': 'unavailable'},
+                {'slot_number': 5, 'left': 'available', 'right': 'available'},
+                {'slot_number': 6, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 7, 'left': 'unavailable', 'right': 'available'},
+                {'slot_number': 8, 'left': 'available', 'right': 'available'},
+                {'slot_number': 9, 'left': 'unavailable', 'right': 'unavailable'},
+                {'slot_number': 10, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 11, 'left': 'available', 'right': 'available'},
+                {'slot_number': 12, 'left': 'unavailable', 'right': 'available'},
+                {'slot_number': 13, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 14, 'left': 'unavailable', 'right': 'unavailable'},
+                {'slot_number': 15, 'left': 'available', 'right': 'available'},
+                {'slot_number': 16, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 17, 'left': 'unavailable', 'right': 'available'},
+                {'slot_number': 18, 'left': 'available', 'right': 'available'},
+                {'slot_number': 19, 'left': 'unavailable', 'right': 'unavailable'},
+                {'slot_number': 20, 'left': 'available', 'right': 'available'},
+                {'slot_number': 21, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 22, 'left': 'unavailable', 'right': 'available'},
+                {'slot_number': 23, 'left': 'available', 'right': 'available'},
+                {'slot_number': 24, 'left': 'unavailable', 'right': 'unavailable'},
+            ],
+        },
+        'BG': {
+            'name': 'BG Lot',
+            'capacity': 48,
+            'slots': [
+                {'slot_number': 1, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 2, 'left': 'unavailable', 'right': 'available'},
+                {'slot_number': 3, 'left': 'available', 'right': 'available'},
+                {'slot_number': 4, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 5, 'left': 'unavailable', 'right': 'unavailable'},
+                {'slot_number': 6, 'left': 'available', 'right': 'available'},
+                {'slot_number': 7, 'left': 'unavailable', 'right': 'available'},
+                {'slot_number': 8, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 9, 'left': 'available', 'right': 'available'},
+                {'slot_number': 10, 'left': 'unavailable', 'right': 'unavailable'},
+                {'slot_number': 11, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 12, 'left': 'available', 'right': 'available'},
+                {'slot_number': 13, 'left': 'unavailable', 'right': 'available'},
+                {'slot_number': 14, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 15, 'left': 'unavailable', 'right': 'unavailable'},
+                {'slot_number': 16, 'left': 'available', 'right': 'available'},
+                {'slot_number': 17, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 18, 'left': 'unavailable', 'right': 'available'},
+                {'slot_number': 19, 'left': 'available', 'right': 'available'},
+                {'slot_number': 20, 'left': 'unavailable', 'right': 'unavailable'},
+                {'slot_number': 21, 'left': 'available', 'right': 'available'},
+                {'slot_number': 22, 'left': 'available', 'right': 'unavailable'},
+                {'slot_number': 23, 'left': 'unavailable', 'right': 'available'},
+                {'slot_number': 24, 'left': 'available', 'right': 'available'},
+            ],
+        },
+    }
+
+    def _normalize_status(self, raw_status):
+        status = (raw_status or 'available').lower()
+        if status in ('occupied', 'taken', 'full', 'in_use', 'busy'):
+            return 'occupied'
+        if status in ('reserved', 'hold', 'pending'):
+            return 'reserved'
+        if status in ('maintenance', 'blocked', 'unavailable'):
+            return 'unavailable'
+        return 'available'
+
+    def _derive_seed_status(self, left_status, right_status):
+        left = (left_status or 'available').lower()
+        right = (right_status or 'available').lower()
+        if left == 'available' and right == 'available':
+            return 'available'
+        if left == 'unavailable' and right == 'unavailable':
+            return 'occupied'
+        return 'reserved'
+
+    def _seed_default_layout(self):
+        layout = self.DEFAULT_LAYOUT
+        try:
+            lots_resp = supabase.table('parking_lot').select('id, code').execute()
+            existing_lots = {lot['code']: lot for lot in (lots_resp.data or []) if lot.get('code')}
+        except Exception:
+            return False
+
+        created_any = False
+
+        for code, config in layout.items():
+            lot_entry = existing_lots.get(code)
+            if not lot_entry:
+                try:
+                    insert_resp = supabase.table('parking_lot').insert({
+                        'code': code,
+                        'name': config.get('name', code),
+                        'capacity': config.get('capacity', len(config.get('slots', []))),
+                    }).execute()
+                except Exception:
+                    continue
+                if not insert_resp.data:
+                    continue
+                lot_entry = insert_resp.data[0]
+                existing_lots[code] = lot_entry
+                created_any = True
+
+            lot_id = lot_entry.get('id')
+            if lot_id is None:
+                continue
+
+            try:
+                slots_resp = supabase.table('parking_slot').select('slot_number').eq('lot_id', lot_id).execute()
+                existing_numbers = {
+                    row['slot_number']
+                    for row in (slots_resp.data or [])
+                    if row.get('slot_number') is not None
+                }
+            except Exception:
+                existing_numbers = set()
+
+            new_slots = []
+            for slot in config.get('slots', []):
+                num = slot.get('slot_number')
+                if num in existing_numbers:
+                    continue
+                status = self._derive_seed_status(slot.get('left'), slot.get('right'))
+                new_slots.append({
+                    'lot_id': lot_id,
+                    'slot_number': num,
+                    'status': status,
+                })
+
+            if new_slots:
+                try:
+                    supabase.table('parking_slot').insert(new_slots).execute()
+                    created_any = True
+                except Exception:
+                    pass
+
+        return created_any
+
     def get(self, request):
         if 'access_token' not in request.session:
             messages.error(request, 'Please log in first.')
             return redirect('signin', portal='student')
+
         try:
             user_id = request.session.get('user_id')
-            user_response = supabase.table('users').select('first_name, last_name, email, student_employee_id, role_id').eq('id', user_id).execute()
-            if user_response.data:
-                user_data = user_response.data[0]
-                role_id = user_data['role_id']
-                role_response = supabase.table('roles').select('role_name').eq('role_id', role_id).execute()
-                role_name = role_response.data[0]['role_name'] if role_response.data else 'student'
-                context = {
-                    'role': role_name,
-                    'full_name': f"{user_data['first_name']} {user_data['last_name']}",
-                    'first_name': user_data['first_name'],
-                    'last_name': user_data['last_name'],
-                    'email': user_data['email'],
-                    'username': user_data['student_employee_id'],
-                }
-            else:
-                context = {
-                    'role': 'student',
-                    'full_name': 'User',
-                    'email': 'No email',
-                    'username': 'No username'
-                }
-        except ValueError as e:
-            # Supabase credentials not configured
+            user_response = supabase.table('users').select(
+                'first_name, last_name, email, student_employee_id, role_id'
+            ).eq('id', user_id).execute()
+
+            if not user_response.data:
+                messages.error(request, 'User not found.')
+                return redirect('home')
+
+            user_data = user_response.data[0]
+            role_response = supabase.table('roles').select('role_name').eq(
+                'role_id', user_data['role_id']
+            ).execute()
+            role_name = role_response.data[0]['role_name'] if role_response.data else 'student'
+        except ValueError:
             messages.error(request, 'Server configuration error. Please contact administrator.')
             return redirect('home')
         except Exception as e:
-            # Other Supabase errors
             messages.error(request, f'Database error: {str(e)}')
-            context = {
-                'role': 'student',
-                'full_name': 'User',
-                'email': 'No email',
-                'username': 'No username'
+            return redirect('home')
+
+    # Only allow admins to manage parking slots
+        if role_name != 'admin':
+            messages.error(request, 'Access denied. Admins only.')
+            return redirect('home')
+
+        try:
+            lots_resp = supabase.table('parking_lot').select('id, code, name, capacity').order('code').execute()
+            lots = lots_resp.data or []
+        except Exception as e:
+            messages.error(request, f'Unable to load parking lots: {str(e)}')
+            lots = []
+
+        try:
+            slots_resp = supabase.table('parking_slot').select('id, lot_id, slot_number, status').execute()
+            all_slots = slots_resp.data or []
+        except Exception as e:
+            messages.error(request, f'Unable to load parking slots: {str(e)}')
+            all_slots = []
+
+        if not lots or not all_slots:
+            if self._seed_default_layout():
+                try:
+                    lots_resp = supabase.table('parking_lot').select('id, code, name, capacity').order('code').execute()
+                    lots = lots_resp.data or []
+                except Exception:
+                    lots = []
+                try:
+                    slots_resp = supabase.table('parking_slot').select('id, lot_id, slot_number, status').execute()
+                    all_slots = slots_resp.data or []
+                except Exception:
+                    all_slots = []
+
+        slots_by_lot = defaultdict(list)
+        for slot in all_slots:
+            lot_id = slot.get('lot_id')
+            if lot_id is None:
+                continue
+            slot_copy = {
+                'id': slot.get('id'),
+                'lot_id': lot_id,
+                'slot_number': slot.get('slot_number'),
+                'status': self._normalize_status(slot.get('status')),
             }
+            slots_by_lot[lot_id].append(slot_copy)
+
+        lot_options = []
+        selected_lot_id = request.GET.get('lot')
+        if selected_lot_id:
+            try:
+                selected_lot_id = int(selected_lot_id)
+            except ValueError:
+                selected_lot_id = None
+
+        current_lot = None
+        for lot in lots:
+            lot_id = lot.get('id')
+            lot_entry = {
+                'id': lot_id,
+                'code': lot.get('code') or lot.get('name') or f'Lot {lot_id}',
+                'name': lot.get('name') or lot.get('code') or 'Parking Lot',
+                'capacity': lot.get('capacity') or len(slots_by_lot.get(lot_id, [])),
+            }
+            lot_entry['is_active'] = (selected_lot_id == lot_id)
+            lot_options.append(lot_entry)
+
+            if current_lot is None and (selected_lot_id is None or selected_lot_id == lot_id):
+                current_lot = lot_entry
+                selected_lot_id = lot_id
+
+        if current_lot is None and lot_options:
+            current_lot = lot_options[0]
+            selected_lot_id = current_lot['id']
+            current_lot['is_active'] = True
+
+        current_slots_raw = slots_by_lot.get(selected_lot_id, [])
+        current_slots_raw.sort(key=lambda s: (s.get('slot_number') is None, s.get('slot_number')))
+
+        slots_display = []
+        counts = {'available': 0, 'occupied': 0, 'reserved': 0, 'unavailable': 0}
+        for slot in current_slots_raw:
+            status = slot['status']
+            counts[status] = counts.get(status, 0) + 1
+            status_label, status_class = self.STATUS_MAP.get(status, ('Available', 'status-available'))
+            slots_display.append({
+                'id': slot['id'],
+                'slot_number': slot.get('slot_number'),
+                'status': status,
+                'status_label': status_label,
+                'status_class': status_class,
+            })
+
+        total_slots = len(current_slots_raw)
+        filled_count = total_slots - counts.get('available', 0)
+        available_count = counts.get('available', 0)
+
+        context = {
+            'role': role_name,
+            'full_name': f"{user_data['first_name']} {user_data['last_name']}",
+            'first_name': user_data['first_name'],
+            'last_name': user_data['last_name'],
+            'email': user_data['email'],
+            'username': user_data['student_employee_id'],
+            'lots': lot_options,
+            'current_lot': current_lot,
+            'slots': slots_display,
+            'filled_count': filled_count,
+            'available_count': available_count,
+            'selected_lot_id': selected_lot_id,
+        }
         return render(request, 'parking_spaces.html', context)
 
 class ManageUsersView(View):
@@ -941,3 +1309,45 @@ class AddUserView(View):
         except Exception as e:
             messages.error(request, f'Failed to create user: {str(e)}')
             return self._render_form(request, current_user, role_name, roles, form_values)
+
+
+@require_POST
+def update_parking_slot_status(request, slot_id):
+    if 'access_token' not in request.session:
+        messages.error(request, 'Please log in first.')
+        return redirect('signin', portal='student')
+
+    try:
+        current_user_id = request.session.get('user_id')
+        user_response = supabase.table('users').select('role_id').eq('id', current_user_id).execute()
+        if not user_response.data:
+            messages.error(request, 'User not found.')
+            return redirect('home')
+
+        role_id = user_response.data[0]['role_id']
+        role_resp = supabase.table('roles').select('role_name').eq('role_id', role_id).execute()
+        role_name = role_resp.data[0]['role_name'] if role_resp.data else 'student'
+    except Exception as e:
+        messages.error(request, f'Database error: {str(e)}')
+        return redirect('home')
+
+    if role_name != 'admin':
+        messages.error(request, 'Access denied. Admins only.')
+        return redirect('home')
+
+    redirect_lot = request.POST.get('lot_id')
+    status = (request.POST.get('status') or '').lower()
+    allowed_statuses = {'available', 'occupied', 'reserved', 'unavailable'}
+    if status not in allowed_statuses:
+        messages.error(request, 'Invalid status.')
+    else:
+        try:
+            supabase.table('parking_slot').update({'status': status}).eq('id', slot_id).execute()
+            messages.success(request, 'Parking slot updated.')
+        except Exception as e:
+            messages.error(request, f'Failed to update slot: {str(e)}')
+
+    redirect_url = reverse('parking_spaces')
+    if redirect_lot:
+        redirect_url = f"{redirect_url}?lot={redirect_lot}"
+    return redirect(redirect_url)

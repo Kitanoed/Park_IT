@@ -5,7 +5,7 @@ from django.urls import path
 from .views import (
     HomeView, RegisterView, LoginView, logout_view,
     SignInView, DashboardView, ParkingSpacesView, ManageUsersView, UserDashboardView,
-    EditUserView, deactivate_user, activate_user, AddUserView,
+    EditUserView, deactivate_user, activate_user, AddUserView, update_parking_slot_status,
 )
 
 urlpatterns = [
@@ -18,6 +18,7 @@ urlpatterns = [
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('user-dashboard/', UserDashboardView.as_view(), name='user_dashboard'),
     path('parking-spaces/', ParkingSpacesView.as_view(), name='parking_spaces'),
+    path('parking-slots/<int:slot_id>/status/', update_parking_slot_status, name='update_slot_status'),
     path("manage-users/", ManageUsersView.as_view(), name="manage_users"),
     path("manage-users/add/", AddUserView.as_view(), name="add_user"),
     path("manage-users/<str:user_id>/edit/", EditUserView.as_view(), name="edit_user"),
