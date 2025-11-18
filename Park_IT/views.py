@@ -10,6 +10,143 @@ import time
 from datetime import datetime, timedelta, timezone as dt_timezone
 from collections import defaultdict
 
+def fetch_parking_data():
+    try:
+        lots_resp = supabase.table('parking_lot').select('id, code, name, capacity').order('code').execute()
+        lots = lots_resp.data or []
+    except Exception:
+        lots = []
+
+    try:
+        slots_resp = supabase.table('parking_slot').select('id, lot_id, slot_number, status').execute()
+        slots = slots_resp.data or []
+    except Exception:
+        slots = []
+
+    return lots, slots
+
+
+def build_lot_display(lots, slots, selected_lot_id=None):
+    slots_by_lot = defaultdict(list)
+    for slot in slots:
+        lot_id = slot.get('lot_id')
+        if lot_id is None:
+            continue
+        slots_by_lot[lot_id].append(slot)
+
+    lot_options = []
+    current_lot = None
+
+    if selected_lot_id:
+        try:
+            selected_lot_id = int(selected_lot_id)
+        except (TypeError, ValueError):
+            selected_lot_id = None
+
+    for lot in lots:
+        lot_id = lot.get('id')
+        entry = {
+            'id': lot_id,
+            'code': lot.get('code') or lot.get('name') or f'Lot {lot_id}',
+            'name': lot.get('name') or lot.get('code') or 'Parking Lot',
+            'capacity': lot.get('capacity') or len(slots_by_lot.get(lot_id, [])),
+        }
+        entry['is_active'] = (selected_lot_id == lot_id)
+        lot_options.append(entry)
+        if current_lot is None and (selected_lot_id is None or selected_lot_id == lot_id):
+            current_lot = entry
+            selected_lot_id = lot_id
+
+    if current_lot is None and lot_options:
+        current_lot = lot_options[0]
+        selected_lot_id = current_lot['id']
+        current_lot['is_active'] = True
+
+    current_slots_raw = slots_by_lot.get(selected_lot_id, [])
+    current_slots_raw.sort(key=lambda s: (s.get('slot_number') is None, s.get('slot_number')))
+
+    counts = {'available': 0, 'occupied': 0, 'reserved': 0, 'unavailable': 0}
+    slots_display = []
+    status_map = ParkingSpacesView.STATUS_MAP
+
+    for slot in current_slots_raw:
+        status = (slot.get('status') or 'available').lower()
+        if status not in counts:
+            status = 'available'
+        counts[status] += 1
+        status_label, status_class = status_map.get(status, ('Available', 'status-available'))
+        slots_display.append({
+            'id': slot.get('id'),
+            'slot_number': slot.get('slot_number'),
+            'status': status,
+            'status_label': status_label,
+            'status_class': status_class,
+        })
+
+    total_slots = len(current_slots_raw)
+    available_count = counts.get('available', 0)
+    filled_count = total_slots - available_count
+
+    return lot_options, current_lot, slots_display, filled_count, available_count, selected_lot_id
+
+
+def summarize_lot_status(lots, slots):
+    lot_map = {lot['id']: lot for lot in lots if lot.get('id') is not None}
+    counts = defaultdict(lambda: {'occupied': 0, 'reserved': 0, 'available': 0, 'total': 0})
+    overall_total = 0
+    overall_occupied = 0
+
+    def pct(part, total):
+        try:
+            return round((part / total) * 100) if total else 0
+        except ZeroDivisionError:
+            return 0
+
+    for slot in slots:
+        lot_id = slot.get('lot_id')
+        if lot_id is None:
+            continue
+        status = (slot.get('status') or 'available').lower()
+        counts[lot_id]['total'] += 1
+        if status in ('occupied', 'taken', 'full', 'in_use', 'busy'):
+            counts[lot_id]['occupied'] += 1
+        elif status in ('reserved', 'hold', 'pending'):
+            counts[lot_id]['reserved'] += 1
+        else:
+            counts[lot_id]['available'] += 1
+
+    lot_status = []
+    for lot_id, lot in lot_map.items():
+        stats = counts.get(lot_id, {'occupied': 0, 'reserved': 0, 'available': 0, 'total': 0})
+        total_slots = stats['total'] or lot.get('capacity') or 0
+        occupied = stats['occupied']
+        reserved = stats['reserved']
+
+        if stats['total'] == 0 and total_slots:
+            available = total_slots - occupied - reserved
+            stats['available'] = max(available, 0)
+
+        overall_total += total_slots
+        overall_occupied += occupied
+
+        occupancy_percent = pct(occupied, total_slots)
+        red_pct = pct(occupied, total_slots)
+        yellow_pct = pct(reserved, total_slots)
+        green_pct = max(0, 100 - red_pct - yellow_pct)
+
+        lot_status.append({
+            'code': lot.get('code') or lot.get('name') or 'Lot',
+            'name': lot.get('name') or lot.get('code') or 'Parking Lot',
+            'occupancy_percent': occupancy_percent,
+            'segment_red': red_pct,
+            'segment_yellow': yellow_pct,
+            'segment_green': green_pct,
+        })
+
+    lot_status.sort(key=lambda item: item['code'])
+    overall_pct = pct(overall_occupied, overall_total)
+    return lot_status, overall_pct
+
 class HomeView(View):
     def get(self, request):
         return render(request, 'home.html')
@@ -237,12 +374,6 @@ class DashboardView(View):
         end_of_day = start_of_day + timedelta(days=1)
         summary_date = now.strftime('%m/%d/%Y')
 
-        def pct(part, total):
-            try:
-                return round((part / total) * 100) if total else 0
-            except ZeroDivisionError:
-                return 0
-
         def parse_timestamp(ts_value):
             if not ts_value:
                 return '—'
@@ -256,70 +387,9 @@ class DashboardView(View):
             except Exception:
                 return ts_value[:5]
 
-        # Parking lots and slots
-        try:
-            lots_resp = supabase.table('parking_lot').select('id, code, name, capacity').execute()
-            lots = lots_resp.data or []
-        except Exception:
-            lots = []
-
+        lots, slots = fetch_parking_data()
+        lot_status, overall_occupancy_pct = summarize_lot_status(lots, slots)
         lot_map = {lot['id']: lot for lot in lots if lot.get('id') is not None}
-
-        try:
-            slots_resp = supabase.table('parking_slot').select('id, lot_id, status').execute()
-            slots = slots_resp.data or []
-        except Exception:
-            slots = []
-
-        status_counts = defaultdict(lambda: {'occupied': 0, 'reserved': 0, 'available': 0, 'total': 0})
-        overall_total_slots = 0
-        overall_occupied = 0
-
-        for slot in slots:
-            lot_id = slot.get('lot_id')
-            if lot_id is None:
-                continue
-            state = (slot.get('status') or '').lower()
-            counts = status_counts[lot_id]
-            counts['total'] += 1
-            if state in ('occupied', 'full', 'taken', 'in_use', 'busy'):
-                counts['occupied'] += 1
-            elif state in ('reserved', 'pending', 'held'):
-                counts['reserved'] += 1
-            else:
-                counts['available'] += 1
-
-        lot_status = []
-        for lot_id, lot in lot_map.items():
-            stats = status_counts.get(lot_id, {'occupied': 0, 'reserved': 0, 'available': 0, 'total': 0})
-            total_slots = stats['total'] or lot.get('capacity') or 0
-            occupied = stats['occupied']
-            reserved = stats['reserved']
-            available = stats['available']
-            if stats['total'] == 0 and total_slots:
-                available = total_slots - occupied - reserved
-                if available < 0:
-                    available = 0
-
-            overall_total_slots += total_slots
-            overall_occupied += occupied
-
-            occupancy_percent = pct(occupied, total_slots)
-            red_pct = pct(occupied, total_slots)
-            yellow_pct = pct(reserved, total_slots)
-            green_pct = max(0, 100 - red_pct - yellow_pct)
-
-            lot_status.append({
-                'code': lot.get('code') or lot.get('name') or 'Lot',
-                'name': lot.get('name') or lot.get('code') or 'Parking Lot',
-                'occupancy_percent': occupancy_percent,
-                'segment_red': red_pct,
-                'segment_yellow': yellow_pct,
-                'segment_green': green_pct,
-            })
-
-        lot_status.sort(key=lambda item: item['code'])
-        overall_occupancy_pct = pct(overall_occupied, overall_total_slots)
 
         # Entries and exits for the day
         try:
@@ -464,18 +534,27 @@ class UserDashboardView(View):
             if role_name == 'admin':
                 return redirect('dashboard')
 
-            context = {
-                'role': role_name,
-                'full_name': f"{user_data['first_name']} {user_data['last_name']}",
-                'first_name': user_data['first_name'],
-                'last_name': user_data['last_name'],
-                'email': user_data['email'],
-                'username': user_data['student_employee_id'],
-            }
-
         except Exception as e:
             messages.error(request, f'Error loading dashboard: {str(e)}')
             return redirect('home')
+
+        lots, slots = fetch_parking_data()
+        lot_status, overall_occupancy_pct = summarize_lot_status(lots, slots)
+        summary_date = timezone.now().strftime('%m/%d/%Y')
+        recommended_lot = next((lot for lot in lot_status if lot['occupancy_percent'] < 85), lot_status[0] if lot_status else None)
+
+        context = {
+            'role': role_name,
+            'full_name': f"{user_data['first_name']} {user_data['last_name']}",
+            'first_name': user_data['first_name'],
+            'last_name': user_data['last_name'],
+            'email': user_data['email'],
+            'username': user_data['student_employee_id'],
+            'lot_status': lot_status,
+            'summary_date': summary_date,
+            'overall_occupancy_pct': overall_occupancy_pct,
+            'recommended_lot': recommended_lot,
+        }
 
         return render(request, 'user_dashboard.html', context)
 
@@ -670,16 +749,6 @@ class ParkingSpacesView(View):
         },
     }
 
-    def _normalize_status(self, raw_status):
-        status = (raw_status or 'available').lower()
-        if status in ('occupied', 'taken', 'full', 'in_use', 'busy'):
-            return 'occupied'
-        if status in ('reserved', 'hold', 'pending'):
-            return 'reserved'
-        if status in ('maintenance', 'blocked', 'unavailable'):
-            return 'unavailable'
-        return 'available'
-
     def _derive_seed_status(self, left_status, right_status):
         left = (left_status or 'available').lower()
         right = (right_status or 'available').lower()
@@ -783,95 +852,14 @@ class ParkingSpacesView(View):
             messages.error(request, 'Access denied. Admins only.')
             return redirect('home')
 
-        try:
-            lots_resp = supabase.table('parking_lot').select('id, code, name, capacity').order('code').execute()
-            lots = lots_resp.data or []
-        except Exception as e:
-            messages.error(request, f'Unable to load parking lots: {str(e)}')
-            lots = []
-
-        try:
-            slots_resp = supabase.table('parking_slot').select('id, lot_id, slot_number, status').execute()
-            all_slots = slots_resp.data or []
-        except Exception as e:
-            messages.error(request, f'Unable to load parking slots: {str(e)}')
-            all_slots = []
-
+        lots, all_slots = fetch_parking_data()
         if not lots or not all_slots:
             if self._seed_default_layout():
-                try:
-                    lots_resp = supabase.table('parking_lot').select('id, code, name, capacity').order('code').execute()
-                    lots = lots_resp.data or []
-                except Exception:
-                    lots = []
-                try:
-                    slots_resp = supabase.table('parking_slot').select('id, lot_id, slot_number, status').execute()
-                    all_slots = slots_resp.data or []
-                except Exception:
-                    all_slots = []
+                lots, all_slots = fetch_parking_data()
 
-        slots_by_lot = defaultdict(list)
-        for slot in all_slots:
-            lot_id = slot.get('lot_id')
-            if lot_id is None:
-                continue
-            slot_copy = {
-                'id': slot.get('id'),
-                'lot_id': lot_id,
-                'slot_number': slot.get('slot_number'),
-                'status': self._normalize_status(slot.get('status')),
-            }
-            slots_by_lot[lot_id].append(slot_copy)
-
-        lot_options = []
-        selected_lot_id = request.GET.get('lot')
-        if selected_lot_id:
-            try:
-                selected_lot_id = int(selected_lot_id)
-            except ValueError:
-                selected_lot_id = None
-
-        current_lot = None
-        for lot in lots:
-            lot_id = lot.get('id')
-            lot_entry = {
-                'id': lot_id,
-                'code': lot.get('code') or lot.get('name') or f'Lot {lot_id}',
-                'name': lot.get('name') or lot.get('code') or 'Parking Lot',
-                'capacity': lot.get('capacity') or len(slots_by_lot.get(lot_id, [])),
-            }
-            lot_entry['is_active'] = (selected_lot_id == lot_id)
-            lot_options.append(lot_entry)
-
-            if current_lot is None and (selected_lot_id is None or selected_lot_id == lot_id):
-                current_lot = lot_entry
-                selected_lot_id = lot_id
-
-        if current_lot is None and lot_options:
-            current_lot = lot_options[0]
-            selected_lot_id = current_lot['id']
-            current_lot['is_active'] = True
-
-        current_slots_raw = slots_by_lot.get(selected_lot_id, [])
-        current_slots_raw.sort(key=lambda s: (s.get('slot_number') is None, s.get('slot_number')))
-
-        slots_display = []
-        counts = {'available': 0, 'occupied': 0, 'reserved': 0, 'unavailable': 0}
-        for slot in current_slots_raw:
-            status = slot['status']
-            counts[status] = counts.get(status, 0) + 1
-            status_label, status_class = self.STATUS_MAP.get(status, ('Available', 'status-available'))
-            slots_display.append({
-                'id': slot['id'],
-                'slot_number': slot.get('slot_number'),
-                'status': status,
-                'status_label': status_label,
-                'status_class': status_class,
-            })
-
-        total_slots = len(current_slots_raw)
-        filled_count = total_slots - counts.get('available', 0)
-        available_count = counts.get('available', 0)
+        lot_options, current_lot, slots_display, filled_count, available_count, selected_lot_id = build_lot_display(
+            lots, all_slots, request.GET.get('lot')
+        )
 
         context = {
             'role': role_name,
@@ -888,6 +876,56 @@ class ParkingSpacesView(View):
             'selected_lot_id': selected_lot_id,
         }
         return render(request, 'parking_spaces.html', context)
+
+
+class StudentParkingSpacesView(View):
+    def get(self, request):
+        if 'access_token' not in request.session:
+            messages.error(request, 'Please log in first.')
+            return redirect('signin', portal='student')
+
+        try:
+            user_id = request.session.get('user_id')
+            user_response = supabase.table('users').select(
+                'first_name, last_name, email, student_employee_id, role_id'
+            ).eq('id', user_id).execute()
+
+            if not user_response.data:
+                messages.error(request, 'User not found.')
+                return redirect('home')
+
+            user_data = user_response.data[0]
+            role_response = supabase.table('roles').select('role_name').eq(
+                'role_id', user_data['role_id']
+            ).execute()
+            role_name = role_response.data[0]['role_name'] if role_response.data else 'student'
+        except Exception as e:
+            messages.error(request, f'Database error: {str(e)}')
+            return redirect('home')
+
+        if role_name == 'admin':
+            return redirect('parking_spaces')
+
+        lots, slots = fetch_parking_data()
+        lot_options, current_lot, slots_display, filled_count, available_count, selected_lot_id = build_lot_display(
+            lots, slots, request.GET.get('lot')
+        )
+
+        context = {
+            'role': role_name,
+            'full_name': f"{user_data['first_name']} {user_data['last_name']}",
+            'first_name': user_data['first_name'],
+            'last_name': user_data['last_name'],
+            'email': user_data['email'],
+            'username': user_data['student_employee_id'],
+            'lots': lot_options,
+            'current_lot': current_lot,
+            'slots': slots_display,
+            'filled_count': filled_count,
+            'available_count': available_count,
+            'selected_lot_id': selected_lot_id,
+        }
+        return render(request, 'stud_parking_spaces.html', context)
 
 class ManageUsersView(View):
     def get(self, request):

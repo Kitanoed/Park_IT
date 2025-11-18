@@ -6,6 +6,7 @@ from .views import (
     HomeView, RegisterView, LoginView, logout_view,
     SignInView, DashboardView, ParkingSpacesView, ManageUsersView, UserDashboardView,
     EditUserView, deactivate_user, activate_user, AddUserView, update_parking_slot_status,
+    StudentParkingSpacesView,
 )
 
 urlpatterns = [
@@ -18,6 +19,7 @@ urlpatterns = [
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('user-dashboard/', UserDashboardView.as_view(), name='user_dashboard'),
     path('parking-spaces/', ParkingSpacesView.as_view(), name='parking_spaces'),
+    path('student/parking-spaces/', StudentParkingSpacesView.as_view(), name='stud_parking_spaces'),
     path('parking-slots/<int:slot_id>/status/', update_parking_slot_status, name='update_slot_status'),
     path("manage-users/", ManageUsersView.as_view(), name="manage_users"),
     path("manage-users/add/", AddUserView.as_view(), name="add_user"),

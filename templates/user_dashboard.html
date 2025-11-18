@@ -299,6 +299,9 @@
       </div>
 
       <nav class="nav">
+        <a class="active" href="{% url 'user_dashboard' %}">
+          <span class="ico">▦</span><span>Dashboard</span>
+        </a>
         <a href="{% url 'stud_parking_spaces' %}">
           <span class="ico">🅿</span><span>Parking Spaces</span>
         </a>
@@ -314,6 +317,76 @@
         </div>
       </div>
     </aside>
+
+    <section class="main">
+      <div class="grid-3">
+        <div class="card metric">
+          <h4>Today&apos;s Summary</h4>
+          <div class="sub">{{ summary_date }}</div>
+          <div class="big" style="font-size:38px;">{{ overall_occupancy_pct }}%</div>
+          <p class="sub">Overall campus occupancy</p>
+        </div>
+
+        <div class="card">
+          <h4>Your Account</h4>
+          <div class="sub">Logged in as</div>
+          <p class="nm" style="font-size:15px;">{{ full_name }}</p>
+          <p class="em">{{ email }}</p>
+          <button class="btn primary" style="margin-top:10px;" onclick="window.location='{% url 'stud_parking_spaces' %}'">
+            View Parking Map
+          </button>
+        </div>
+
+        <div class="card">
+          <h4>Recommended Lot</h4>
+          {% if recommended_lot %}
+            <p class="lot-name" style="font-size:14px;">{{ recommended_lot.name }}</p>
+            <div class="bar" style="margin:10px 0;">
+              <span class="seg red" style="width:{{ recommended_lot.segment_red }}%"></span>
+              <span class="seg yellow" style="width:{{ recommended_lot.segment_yellow }}%"></span>
+              <span class="seg green" style="width:{{ recommended_lot.segment_green }}%"></span>
+            </div>
+            <p class="percent">{{ recommended_lot.occupancy_percent }}% full</p>
+            <p class="sub">Best chance for quick parking right now.</p>
+          {% else %}
+            <p class="sub">Parking data is not available yet.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="grid-lower">
+        <div class="card">
+          <h4>Lot Occupancy</h4>
+          {% if lot_status %}
+            {% for lot in lot_status %}
+            <div class="status-row">
+              <div class="lot-name">{{ lot.code }}</div>
+              <div class="bar">
+                <span class="seg red" style="width:{{ lot.segment_red }}%"></span>
+                <span class="seg yellow" style="width:{{ lot.segment_yellow }}%"></span>
+                <span class="seg green" style="width:{{ lot.segment_green }}%"></span>
+              </div>
+              <div class="percent">{{ lot.occupancy_percent }}%</div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="empty-state">Parking information is not available yet.</div>
+          {% endif %}
+        </div>
+
+        <div class="card">
+          <h4>Tips</h4>
+          <ul style="margin-left:18px;font-size:13px;color:var(--muted);line-height:1.6;">
+            <li>Check the parking map before heading out.</li>
+            <li>Lots under 80% occupancy usually have open slots.</li>
+            <li>Arrive 10 minutes earlier during peak hours.</li>
+            <li>Need help? Contact the parking office through the admin portal.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
 
 <div class="modal-overlay" id="accountModal">
   <div class="account-modal">
