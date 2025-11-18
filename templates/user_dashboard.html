@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Admin - Dashboard{% endblock %}
+{% block title %}User - Dashboard{% endblock %}
 
 {% block content %}
 <style>
@@ -299,7 +299,7 @@
       </div>
 
       <nav class="nav">
-        <a href="{% url 'user_parking' %}">
+        <a href="{% url 'stud_parking_spaces' %}">
           <span class="ico">🅿</span><span>Parking Spaces</span>
         </a>
       </nav>
@@ -314,200 +314,6 @@
         </div>
       </div>
     </aside>
-
-    <!-- Main -->
-    <section class="main">
-      <div class="grid-3">
-        <!-- Parking Lot Status -->
-        <div class="card">
-          <h4>Parking Lot Status</h4>
-          <div class="sub">10/06/2025</div>
-
-          <div class="status-row">
-            <div class="lot-name">NGE</div>
-            <div class="bar">
-              <span class="seg red" style="width:30%"></span>
-              <span class="seg yellow" style="width:20%"></span>
-              <span class="seg green" style="width:50%"></span>
-            </div>
-            <div class="percent">72%</div>
-          </div>
-
-          <div class="status-row">
-            <div class="lot-name">ACAD</div>
-            <div class="bar">
-              <span class="seg red" style="width:10%"></span>
-              <span class="seg yellow" style="width:20%"></span>
-              <span class="seg green" style="width:70%"></span>
-            </div>
-            <div class="percent">90%</div>
-          </div>
-
-          <div class="status-row">
-            <div class="lot-name">BC</div>
-            <div class="bar">
-              <span class="seg red" style="width:34%"></span>
-              <span class="seg yellow" style="width:12%"></span>
-              <span class="seg green" style="width:54%"></span>
-            </div>
-            <div class="percent">64%</div>
-          </div>
-
-          <div class="status-row">
-            <div class="lot-name">GYM</div>
-            <div class="bar">
-              <span class="seg red" style="width:1%"></span>
-              <span class="seg yellow" style="width:10%"></span>
-              <span class="seg green" style="width:89%"></span>
-            </div>
-            <div class="percent">99%</div>
-          </div>
-
-          <div class="status-row">
-            <div class="lot-name">RTL</div>
-            <div class="bar">
-              <span class="seg red" style="width:4%"></span>
-              <span class="seg yellow" style="width:3%"></span>
-              <span class="seg green" style="width:93%"></span>
-            </div>
-            <div class="percent">93%</div>
-          </div>
-
-          <div class="status-row">
-            <div class="lot-name">BG</div>
-            <div class="bar">
-              <span class="seg red" style="width:20%"></span>
-              <span class="seg yellow" style="width:0%"></span>
-              <span class="seg green" style="width:80%"></span>
-            </div>
-            <div class="percent">80%</div>
-          </div>
-        </div>
-
-        <!-- Total Entries -->
-        <div class="card metric">
-          <div>
-            <h4>Total Entries for the Day</h4>
-            <div class="sub">10/06/2025</div>
-            <div class="big">253</div>
-          </div>
-        </div>
-
-        <!-- Total Current Occupancy -->
-        <div class="card">
-          <h4>Total Current Occupancy</h4>
-          <div class="sub">10/06/2025</div>
-          <div class="metric" style="margin-bottom:8px;">
-            <div class="big" style="font-size:36px;">90%</div>
-          </div>
-
-          <div class="status-row">
-            <div class="lot-name">NGE</div>
-            <div class="bar">
-              <span class="seg red" style="width:30%"></span>
-              <span class="seg yellow" style="width:20%"></span>
-              <span class="seg green" style="width:50%"></span>
-            </div>
-            <div class="percent">70%</div>
-          </div>
-          <div class="status-row">
-            <div class="lot-name">ACAD</div>
-            <div class="bar">
-              <span class="seg red" style="width:10%"></span>
-              <span class="seg yellow" style="width:0%"></span>
-              <span class="seg green" style="width:90%"></span>
-            </div>
-            <div class="percent">90%</div>
-          </div>
-          <div class="status-row">
-            <div class="lot-name">BC</div>
-            <div class="bar">
-              <span class="seg red" style="width:22%"></span>
-              <span class="seg yellow" style="width:14%"></span>
-              <span class="seg green" style="width:64%"></span>
-            </div>
-            <div class="percent">64%</div>
-          </div>
-          <div class="status-row">
-            <div class="lot-name">GYM</div>
-            <div class="bar">
-              <span class="seg red" style="width:1%"></span>
-              <span class="seg yellow" style="width:0%"></span>
-              <span class="seg green" style="width:99%"></span>
-            </div>
-            <div class="percent">99%</div>
-          </div>
-          <div class="status-row">
-            <div class="lot-name">RTL</div>
-            <div class="bar">
-              <span class="seg red" style="width:7%"></span>
-              <span class="seg yellow" style="width:0%"></span>
-              <span class="seg green" style="width:93%"></span>
-            </div>
-            <div class="percent">93%</div>
-          </div>
-          <div class="status-row">
-            <div class="lot-name">BG</div>
-            <div class="bar">
-              <span class="seg red" style="width:20%"></span>
-              <span class="seg yellow" style="width:0%"></span>
-              <span class="seg green" style="width:80%"></span>
-            </div>
-            <div class="percent">80%</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="grid-lower">
-        <div class="left-col">
-          <div class="card metric">
-            <div>
-              <h4>Total Exits for the Day</h4>
-              <div class="sub">10/06/2025</div>
-              <div class="big">158</div>
-            </div>
-          </div>
-
-          <div class="card" style="margin-top:14px;">
-            <h4>Recent Activity</h4>
-            <table>
-              <thead>
-                <tr><th>Time</th><th>Plate</th><th>Action</th><th>Zone</th></tr>
-              </thead>
-              <tbody>
-                <tr><td>08:41</td><td>ABC-1234</td><td>Enter</td><td>North A2</td></tr>
-                <tr><td>08:55</td><td>XYZ-9876</td><td>Exit</td><td>Gate 3</td></tr>
-                <tr><td>09:12</td><td>CIT-0021</td><td>Permit</td><td>Office</td></tr>
-                <tr><td>09:20</td><td>GHT-5521</td><td>Warning</td><td>South B1</td></tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div class="card" style="margin-top:14px;">
-            <h4>Quick Actions</h4>
-            <div class="actions">
-              <button class="btn primary">Issue Permit</button>
-              <button class="btn primary">Reserve Slot</button>
-              <button class="btn">Add User</button>
-              <button class="btn">Export</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <h4>Peak Parking Times (weekly)</h4>
-          <div class="sub">10/06/2025 - 10/11/2025</div>
-          <div style="
-            height: 380px; border:1px dashed var(--border); border-radius:12px;
-            background: linear-gradient(180deg, rgba(245,247,250,0.5), #fff 40%);
-            display:flex; align-items:center; justify-content:center; color:var(--muted);">
-            Chart goes here (Map colors: #f57c00 → #b71c1c → #e53935 → #ffb400)
-          </div>
-        </div>
-      </div>
-    </section>
-  </div>
-</div>
 
 <div class="modal-overlay" id="accountModal">
   <div class="account-modal">
