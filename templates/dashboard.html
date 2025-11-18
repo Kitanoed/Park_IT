@@ -260,6 +260,25 @@
   .seg.yellow{background:var(--bar-yellow)}
   .seg.green{background:var(--bar-green)}
 
+  .week-row{
+    display:grid;
+    grid-template-columns: 80px 1fr 48px;
+    align-items:center;
+    gap:10px;
+    margin:6px 0;
+    font-size:12px;
+  }
+  .week-day{
+    font-weight:600;
+    color:var(--text);
+  }
+  .empty-state{
+    padding:20px 10px;
+    text-align:center;
+    color:var(--muted);
+    font-size:12px;
+  }
+
   .grid-lower{display:grid;grid-template-columns: 1.05fr 1.5fr; gap:14px; margin-top:14px}
   .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
   .btn{height:36px;padding:0 14px;border-radius:10px;border:1px solid var(--border);background:#fff;color:var(--text);font-weight:700;cursor:pointer}
@@ -327,140 +346,55 @@
         <!-- Parking Lot Status -->
         <div class="card">
           <h4>Parking Lot Status</h4>
-          <div class="sub">10/06/2025</div>
-
-          <div class="status-row">
-            <div class="lot-name">NGE</div>
-            <div class="bar">
-              <span class="seg red" style="width:30%"></span>
-              <span class="seg yellow" style="width:20%"></span>
-              <span class="seg green" style="width:50%"></span>
+          <div class="sub">{{ summary_date }}</div>
+          {% if lot_status %}
+            {% for lot in lot_status %}
+            <div class="status-row">
+              <div class="lot-name">{{ lot.code }}</div>
+              <div class="bar">
+                <span class="seg red" style="width:{{ lot.segment_red }}%"></span>
+                <span class="seg yellow" style="width:{{ lot.segment_yellow }}%"></span>
+                <span class="seg green" style="width:{{ lot.segment_green }}%"></span>
+              </div>
+              <div class="percent">{{ lot.occupancy_percent }}%</div>
             </div>
-            <div class="percent">72%</div>
-          </div>
-
-          <div class="status-row">
-            <div class="lot-name">ACAD</div>
-            <div class="bar">
-              <span class="seg red" style="width:10%"></span>
-              <span class="seg yellow" style="width:20%"></span>
-              <span class="seg green" style="width:70%"></span>
-            </div>
-            <div class="percent">90%</div>
-          </div>
-
-          <div class="status-row">
-            <div class="lot-name">BC</div>
-            <div class="bar">
-              <span class="seg red" style="width:34%"></span>
-              <span class="seg yellow" style="width:12%"></span>
-              <span class="seg green" style="width:54%"></span>
-            </div>
-            <div class="percent">64%</div>
-          </div>
-
-          <div class="status-row">
-            <div class="lot-name">GYM</div>
-            <div class="bar">
-              <span class="seg red" style="width:1%"></span>
-              <span class="seg yellow" style="width:10%"></span>
-              <span class="seg green" style="width:89%"></span>
-            </div>
-            <div class="percent">99%</div>
-          </div>
-
-          <div class="status-row">
-            <div class="lot-name">RTL</div>
-            <div class="bar">
-              <span class="seg red" style="width:4%"></span>
-              <span class="seg yellow" style="width:3%"></span>
-              <span class="seg green" style="width:93%"></span>
-            </div>
-            <div class="percent">93%</div>
-          </div>
-
-          <div class="status-row">
-            <div class="lot-name">BG</div>
-            <div class="bar">
-              <span class="seg red" style="width:20%"></span>
-              <span class="seg yellow" style="width:0%"></span>
-              <span class="seg green" style="width:80%"></span>
-            </div>
-            <div class="percent">80%</div>
-          </div>
+            {% endfor %}
+          {% else %}
+            <div class="empty-state">No parking lots configured yet.</div>
+          {% endif %}
         </div>
 
         <!-- Total Entries -->
         <div class="card metric">
           <div>
             <h4>Total Entries for the Day</h4>
-            <div class="sub">10/06/2025</div>
-            <div class="big">253</div>
+            <div class="sub">{{ summary_date }}</div>
+            <div class="big">{{ total_entries }}</div>
           </div>
         </div>
 
         <!-- Total Current Occupancy -->
         <div class="card">
           <h4>Total Current Occupancy</h4>
-          <div class="sub">10/06/2025</div>
+          <div class="sub">{{ summary_date }}</div>
           <div class="metric" style="margin-bottom:8px;">
-            <div class="big" style="font-size:36px;">90%</div>
+            <div class="big" style="font-size:36px;">{{ overall_occupancy_pct }}%</div>
           </div>
-
-          <div class="status-row">
-            <div class="lot-name">NGE</div>
-            <div class="bar">
-              <span class="seg red" style="width:30%"></span>
-              <span class="seg yellow" style="width:20%"></span>
-              <span class="seg green" style="width:50%"></span>
+          {% if lot_status %}
+            {% for lot in lot_status|slice:":5" %}
+            <div class="status-row">
+              <div class="lot-name">{{ lot.code }}</div>
+              <div class="bar">
+                <span class="seg red" style="width:{{ lot.segment_red }}%"></span>
+                <span class="seg yellow" style="width:{{ lot.segment_yellow }}%"></span>
+                <span class="seg green" style="width:{{ lot.segment_green }}%"></span>
+              </div>
+              <div class="percent">{{ lot.occupancy_percent }}%</div>
             </div>
-            <div class="percent">70%</div>
-          </div>
-          <div class="status-row">
-            <div class="lot-name">ACAD</div>
-            <div class="bar">
-              <span class="seg red" style="width:10%"></span>
-              <span class="seg yellow" style="width:0%"></span>
-              <span class="seg green" style="width:90%"></span>
-            </div>
-            <div class="percent">90%</div>
-          </div>
-          <div class="status-row">
-            <div class="lot-name">BC</div>
-            <div class="bar">
-              <span class="seg red" style="width:22%"></span>
-              <span class="seg yellow" style="width:14%"></span>
-              <span class="seg green" style="width:64%"></span>
-            </div>
-            <div class="percent">64%</div>
-          </div>
-          <div class="status-row">
-            <div class="lot-name">GYM</div>
-            <div class="bar">
-              <span class="seg red" style="width:1%"></span>
-              <span class="seg yellow" style="width:0%"></span>
-              <span class="seg green" style="width:99%"></span>
-            </div>
-            <div class="percent">99%</div>
-          </div>
-          <div class="status-row">
-            <div class="lot-name">RTL</div>
-            <div class="bar">
-              <span class="seg red" style="width:7%"></span>
-              <span class="seg yellow" style="width:0%"></span>
-              <span class="seg green" style="width:93%"></span>
-            </div>
-            <div class="percent">93%</div>
-          </div>
-          <div class="status-row">
-            <div class="lot-name">BG</div>
-            <div class="bar">
-              <span class="seg red" style="width:20%"></span>
-              <span class="seg yellow" style="width:0%"></span>
-              <span class="seg green" style="width:80%"></span>
-            </div>
-            <div class="percent">80%</div>
-          </div>
+            {% endfor %}
+          {% else %}
+            <div class="empty-state">No occupancy data available.</div>
+          {% endif %}
         </div>
       </div>
 
@@ -471,8 +405,8 @@
           <div class="card metric">
             <div>
               <h4>Total Exits for the Day</h4>
-              <div class="sub">10/06/2025</div>
-              <div class="big">158</div>
+              <div class="sub">{{ summary_date }}</div>
+              <div class="big">{{ total_exits }}</div>
             </div>
           </div>
 
@@ -483,10 +417,20 @@
                 <tr><th>Time</th><th>Plate</th><th>Action</th><th>Zone</th></tr>
               </thead>
               <tbody>
-                <tr><td>08:41</td><td>ABC-1234</td><td>Enter</td><td>North A2</td></tr>
-                <tr><td>08:55</td><td>XYZ-9876</td><td>Exit</td><td>Gate 3</td></tr>
-                <tr><td>09:12</td><td>CIT-0021</td><td>Permit</td><td>Office</td></tr>
-                <tr><td>09:20</td><td>GHT-5521</td><td>Warning</td><td>South B1</td></tr>
+                {% if recent_activity %}
+                  {% for act in recent_activity %}
+                  <tr>
+                    <td>{{ act.time }}</td>
+                    <td>{{ act.plate }}</td>
+                    <td>{{ act.action }}</td>
+                    <td>{{ act.zone }}</td>
+                  </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr>
+                    <td colspan="4" class="empty-state">No movements recorded yet today.</td>
+                  </tr>
+                {% endif %}
               </tbody>
             </table>
           </div>
@@ -496,22 +440,30 @@
             <div class="actions">
               <button class="btn primary">Issue Permit</button>
               <button class="btn primary">Reserve Slot</button>
-              <button class="btn">Add User</button>
+              <button class="btn" onclick="window.location='{% url 'add_user' %}'">Add User</button>
               <button class="btn">Export</button>
             </div>
           </div>
         </div>
 
-        <!-- Right: chart placeholder -->
+        <!-- Right -->
         <div class="card">
           <h4>Peak Parking Times (weekly)</h4>
-          <div class="sub">10/06/2025 - 10/11/2025</div>
-          <div style="
-            height: 380px; border:1px dashed var(--border); border-radius:12px;
-            background: linear-gradient(180deg, rgba(245,247,250,0.5), #fff 40%);
-            display:flex; align-items:center; justify-content:center; color:var(--muted);">
-            Chart goes here (Map colors: #f57c00 → #b71c1c → #e53935 → #ffb400)
-          </div>
+          <div class="sub">Past 7 days</div>
+          {% if weekly_occupancy %}
+            {% for day in weekly_occupancy %}
+            <div class="week-row">
+              <div class="week-day">{{ day.label }}</div>
+              <div class="bar">
+                <span class="seg red" style="width:{{ day.value }}%"></span>
+                <span class="seg green" style="width:{{ day.available }}%"></span>
+              </div>
+              <div class="percent">{{ day.value }}%</div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="empty-state">No occupancy history yet.</div>
+          {% endif %}
         </div>
       </div>
     </section>

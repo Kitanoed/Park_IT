@@ -2,10 +2,12 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.views import View
 from django.views.decorators.http import require_POST
+from django.utils import timezone
 from .forms import RegisterForm, LoginForm
 from utils import supabase
 import time
-from datetime import datetime
+from datetime import datetime, timedelta, timezone as dt_timezone
+from collections import defaultdict
 
 class HomeView(View):
     def get(self, request):
@@ -229,6 +231,192 @@ class DashboardView(View):
             messages.error(request, 'Access denied. Admins only.')
             return redirect('home')
 
+        now = timezone.now()
+        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        end_of_day = start_of_day + timedelta(days=1)
+        summary_date = now.strftime('%m/%d/%Y')
+
+        def pct(part, total):
+            try:
+                return round((part / total) * 100) if total else 0
+            except ZeroDivisionError:
+                return 0
+
+        def parse_timestamp(ts_value):
+            if not ts_value:
+                return '—'
+            try:
+                ts_clean = ts_value.replace('Z', '+00:00')
+                dt_obj = datetime.fromisoformat(ts_clean)
+                if dt_obj.tzinfo is None:
+                    dt_obj = dt_obj.replace(tzinfo=dt_timezone.utc)
+                local_dt = dt_obj.astimezone(timezone.get_current_timezone())
+                return local_dt.strftime('%H:%M')
+            except Exception:
+                return ts_value[:5]
+
+        # Parking lots and slots
+        try:
+            lots_resp = supabase.table('parking_lot').select('id, code, name, capacity').execute()
+            lots = lots_resp.data or []
+        except Exception:
+            lots = []
+
+        lot_map = {lot['id']: lot for lot in lots if lot.get('id') is not None}
+
+        try:
+            slots_resp = supabase.table('parking_slot').select('id, lot_id, status').execute()
+            slots = slots_resp.data or []
+        except Exception:
+            slots = []
+
+        status_counts = defaultdict(lambda: {'occupied': 0, 'reserved': 0, 'available': 0, 'total': 0})
+        overall_total_slots = 0
+        overall_occupied = 0
+
+        for slot in slots:
+            lot_id = slot.get('lot_id')
+            if lot_id is None:
+                continue
+            state = (slot.get('status') or '').lower()
+            counts = status_counts[lot_id]
+            counts['total'] += 1
+            if state in ('occupied', 'full', 'taken', 'in_use', 'busy'):
+                counts['occupied'] += 1
+            elif state in ('reserved', 'pending', 'held'):
+                counts['reserved'] += 1
+            else:
+                counts['available'] += 1
+
+        lot_status = []
+        for lot_id, lot in lot_map.items():
+            stats = status_counts.get(lot_id, {'occupied': 0, 'reserved': 0, 'available': 0, 'total': 0})
+            total_slots = stats['total'] or lot.get('capacity') or 0
+            occupied = stats['occupied']
+            reserved = stats['reserved']
+            available = stats['available']
+            if stats['total'] == 0 and total_slots:
+                available = total_slots - occupied - reserved
+                if available < 0:
+                    available = 0
+
+            overall_total_slots += total_slots
+            overall_occupied += occupied
+
+            occupancy_percent = pct(occupied, total_slots)
+            red_pct = pct(occupied, total_slots)
+            yellow_pct = pct(reserved, total_slots)
+            green_pct = max(0, 100 - red_pct - yellow_pct)
+
+            lot_status.append({
+                'code': lot.get('code') or lot.get('name') or 'Lot',
+                'name': lot.get('name') or lot.get('code') or 'Parking Lot',
+                'occupancy_percent': occupancy_percent,
+                'segment_red': red_pct,
+                'segment_yellow': yellow_pct,
+                'segment_green': green_pct,
+            })
+
+        lot_status.sort(key=lambda item: item['code'])
+        overall_occupancy_pct = pct(overall_occupied, overall_total_slots)
+
+        # Entries and exits for the day
+        try:
+            entries_resp = (
+                supabase.table('entries_exits')
+                .select('id, time, vehicle_id, action, zone, lot_id')
+                .gte('time', start_of_day.isoformat())
+                .lt('time', end_of_day.isoformat())
+                .order('time', desc=True)
+                .limit(50)
+                .execute()
+            )
+            entry_rows = entries_resp.data or []
+        except Exception:
+            entry_rows = []
+
+        vehicle_ids = {row.get('vehicle_id') for row in entry_rows if row.get('vehicle_id')}
+        vehicle_map = {}
+        if vehicle_ids:
+            try:
+                vehicle_resp = (
+                    supabase.table('vehicle')
+                    .select('id, plate')
+                    .in_('id', list(vehicle_ids))
+                    .execute()
+                )
+                vehicle_map = {row['id']: row.get('plate') or '—' for row in (vehicle_resp.data or [])}
+            except Exception:
+                vehicle_map = {}
+
+        total_entries = 0
+        total_exits = 0
+        recent_activity = []
+
+        for row in entry_rows:
+            action = (row.get('action') or '').lower()
+            if action.startswith('enter'):
+                total_entries += 1
+            elif action.startswith('exit'):
+                total_exits += 1
+
+        for row in entry_rows[:6]:
+            action_raw = (row.get('action') or '—').title()
+            lot = lot_map.get(row.get('lot_id'))
+            zone = row.get('zone') or (lot.get('code') if lot else '—')
+            recent_activity.append({
+                'time': parse_timestamp(row.get('time')),
+                'plate': vehicle_map.get(row.get('vehicle_id'), '—'),
+                'action': action_raw,
+                'zone': zone,
+            })
+
+        # Weekly occupancy (average per day)
+        weekly_start = start_of_day - timedelta(days=6)
+        try:
+            occ_resp = (
+                supabase.table('daily_occupancy')
+                .select('date, occupancy_percentage')
+                .gte('date', weekly_start.date().isoformat())
+                .order('date', ascending=True)
+                .execute()
+            )
+            occ_rows = occ_resp.data or []
+        except Exception:
+            occ_rows = []
+
+        daily_totals = defaultdict(lambda: {'sum': 0, 'count': 0})
+        for row in occ_rows:
+            date_val = row.get('date')
+            if not date_val:
+                continue
+            day_key = date_val[:10]
+            pct_val = row.get('occupancy_percentage') or 0
+            daily_totals[day_key]['sum'] += pct_val
+            daily_totals[day_key]['count'] += 1
+
+        weekly_occupancy = []
+        for day_key in sorted(daily_totals.keys()):
+            data = daily_totals[day_key]
+            avg = data['sum'] / data['count'] if data['count'] else 0
+            try:
+                label = datetime.strptime(day_key, '%Y-%m-%d').strftime('%b %d')
+            except ValueError:
+                label = day_key
+            val = round(avg, 1)
+            weekly_occupancy.append({
+                'label': label,
+                'value': val,
+                'available': max(0, 100 - val),
+            })
+
+        if not weekly_occupancy:
+            weekly_occupancy = [{
+                'label': now.strftime('%b %d'),
+                'value': overall_occupancy_pct,
+                'available': max(0, 100 - overall_occupancy_pct),
+            }]
+
         context = {
             'role': role_name,
             'full_name': f"{user_data['first_name']} {user_data['last_name']}",
@@ -236,6 +424,13 @@ class DashboardView(View):
             'last_name': user_data['last_name'],
             'email': user_data['email'],
             'username': user_data['student_employee_id'],
+            'lot_status': lot_status,
+            'summary_date': summary_date,
+            'total_entries': total_entries,
+            'total_exits': total_exits,
+            'overall_occupancy_pct': overall_occupancy_pct,
+            'recent_activity': recent_activity,
+            'weekly_occupancy': weekly_occupancy,
         }
         return render(request, 'dashboard.html', context)
 
