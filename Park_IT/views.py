@@ -4,6 +4,7 @@ from django.views import View
 from .forms import RegisterForm, LoginForm
 from utils import supabase
 import time
+from datetime import datetime
 
 class HomeView(View):
     def get(self, request):
@@ -355,30 +356,43 @@ class ManageUsersView(View):
             messages.error(request, 'Access denied. Admins only.')
             return redirect('home')
 
-        # Example user list for template demonstration
-        users = [
-            {
-                "full_name": "Jane Doe",
-                "username": "jdoe",
-                "role": "Admin",
-                "status": "Active",
-                "date_added": "09/17/2025",
-            },
-            {
-                "full_name": "John Doe",
-                "username": "jndoe",
-                "role": "Attendant",
-                "status": "Active",
-                "date_added": "09/17/2025",
-            },
-            {
-                "full_name": "Person 1",
-                "username": "prsn1",
-                "role": "Attendant",
-                "status": "Inactive",
-                "date_added": "09/17/2025",
-            }
-        ]
+        try:
+            users_response = supabase.table('users').select(
+                'first_name, last_name, student_employee_id, status, created_at, roles(role_name)'
+            ).order('created_at', desc=True).execute()
+            raw_users = users_response.data or []
+        except Exception as e:
+            messages.error(request, f'Unable to load users: {str(e)}')
+            raw_users = []
+
+        def format_date(date_str):
+            if not date_str:
+                return '—'
+            try:
+                # Handle timestamps with or without timezone/Z suffix
+                clean = date_str.rstrip('Z')
+                dt = datetime.fromisoformat(clean)
+                return dt.strftime('%m/%d/%Y')
+            except ValueError:
+                return date_str.split('T')[0] if 'T' in date_str else date_str
+
+        users = []
+        for item in raw_users:
+            first = (item.get('first_name') or '').strip()
+            last = (item.get('last_name') or '').strip()
+            full_name = (f"{first} {last}").strip() or '—'
+            role_data = item.get('roles') or {}
+            role_label = (role_data.get('role_name') or '—').title()
+            status_label = (item.get('status') or 'unknown').title()
+            date_added = format_date(item.get('created_at'))
+
+            users.append({
+                "full_name": full_name,
+                "username": item.get('student_employee_id') or '—',
+                "role": role_label,
+                "status": status_label,
+                "date_added": date_added,
+            })
 
         context = {
             'users': users,
