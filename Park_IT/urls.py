@@ -1,3 +1,5 @@
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path
 from .views import (
@@ -17,3 +19,6 @@ urlpatterns = [
     path('parking-spaces/', ParkingSpacesView.as_view(), name='parking_spaces'),
     path("manage-users/", ManageUsersView.as_view(), name="manage_users"),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0])
