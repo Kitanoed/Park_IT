@@ -184,10 +184,10 @@
       </div>
       <div class="full-row">
         <label class="add-label">Role</label>
-        <select name="role_id" class="add-select" required>
-          <option value="" disabled {% if not form_role_id %}selected{% endif %}>Select role</option>
+        <select name="role" class="add-select" required>
+          <option value="" disabled {% if not form_role %}selected{% endif %}>Select role</option>
           {% for r in roles %}
-            <option value="{{ r.role_id }}" {% if r.role_id|stringformat:"s" == form_role_id|stringformat:"s" %}selected{% endif %}>
+            <option value="{{ r.role }}" {% if r.role == form_role %}selected{% endif %}>
               {{ r.role_name|title }}
             </option>
           {% endfor %}

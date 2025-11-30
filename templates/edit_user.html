@@ -132,10 +132,10 @@
       </div>
       <div class="full-row">
         <label class="edit-label">Role</label>
-        <select name="role_id" class="edit-select" required>
+        <select name="role" class="edit-select" required>
           <option value="" disabled>Select role</option>
           {% for r in roles %}
-            <option value="{{ r.role_id }}" {% if r.role_id == target_user.role_id %}selected{% endif %}>
+            <option value="{{ r.role }}" {% if r.role == target_user.role %}selected{% endif %}>
               {{ r.role_name|title }}
             </option>
           {% endfor %}

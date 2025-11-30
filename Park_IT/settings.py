@@ -59,6 +59,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'Park_IT.middleware.RoleBasedAccessControlMiddleware',  # RBAC middleware
 ]
 
 ROOT_URLCONF = 'Park_IT.urls'

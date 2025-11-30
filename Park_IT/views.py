@@ -152,8 +152,82 @@ class HomeView(View):
         return render(request, 'home.html')
 
 class SignInView(View):
+    """Legacy view - redirects to unified login"""
     def get(self, request):
-        return render(request, 'signIn.html')
+        return redirect('login')
+
+class UnifiedLoginView(View):
+    """Unified login view for all users (replaces dual-portal system)"""
+    def get(self, request):
+        # If already logged in, redirect based on role
+        if 'access_token' in request.session and 'user_id' in request.session:
+            try:
+                user_id = request.session.get('user_id')
+                user_response = supabase.table('users').select('role').eq('id', user_id).execute()
+                if user_response.data:
+                    role = user_response.data[0].get('role', 'user')
+                    if role == 'admin':
+                        return redirect('dashboard')
+                    else:
+                        return redirect('user_dashboard')
+            except:
+                pass  # If error, show login form
+        
+        form = LoginForm()
+        return render(request, 'login.html', {'form': form})
+
+    def post(self, request):
+        form = LoginForm(request.POST)
+        if not form.is_valid():
+            return render(request, 'login.html', {'form': form})
+
+        id_input = form.cleaned_data['id']
+        password = form.cleaned_data['password']
+
+        try:
+            # Look up user by student_employee_id
+            user_resp = supabase.table('users')\
+                .select('email, role')\
+                .eq('student_employee_id', id_input)\
+                .execute()
+        except Exception as e:
+            messages.error(request, f'Error connecting to database: {str(e)}')
+            return render(request, 'login.html', {'form': form})
+
+        if not user_resp.data:
+            messages.error(request, 'ID not found.')
+            return render(request, 'login.html', {'form': form})
+
+        email = user_resp.data[0]['email']
+        user_role = user_resp.data[0].get('role', 'user')
+
+        try:
+            auth_resp = supabase.auth.sign_in_with_password(
+                {"email": email, "password": password}
+            )
+        except Exception as e:
+            messages.error(request, f'Authentication error: {str(e)}')
+            return render(request, 'login.html', {'form': form})
+
+        if not auth_resp.session:
+            error_msg = 'Invalid credentials.'
+            if hasattr(auth_resp, 'error') and auth_resp.error:
+                error_msg = auth_resp.error.message or error_msg
+            messages.error(request, error_msg)
+            return render(request, 'login.html', {'form': form})
+
+        # Store session data
+        request.session['access_token'] = auth_resp.session.access_token
+        request.session['user_id'] = auth_resp.user.id
+        request.session['role'] = user_role  # Store role in session for quick access
+
+        messages.success(request, 'Login successful!')
+        
+        # Role-based redirection (as per requirements)
+        if user_role == 'admin':
+            return redirect('dashboard')  # /admin/dashboard
+        else:
+            return redirect('user_dashboard')  # /users/attendant
 
 class RegisterView(View):
     def get(self, request):
@@ -197,28 +271,19 @@ class RegisterView(View):
             messages.error(request, 'Sign-up failed. Please try again later.')
             return render(request, 'register.html', {'form': form})
 
-        # === Insert into `users` table ===
+        # === Insert into `users` table with default role "user" ===
         try:
-            # Get role_id from roles table
-            role_resp = supabase.table('roles')\
-                .select('role_id')\
-                .eq('role_name', data['role'])\
-                .execute()
-
-            if not role_resp.data:
-                messages.error(request, 'Invalid role selected.')
-                return render(request, 'register.html', {'form': form})
-
-            role_id = role_resp.data[0]['role_id']
-
-            # Insert user profile
+            # All new registrations default to "user" role - no role selection allowed
+            # Admin role can only be assigned by existing admins via server-side API
+            
+            # Insert user profile with role="user" (default)
             supabase.table('users').insert({
                 'id': response.user.id,
                 'first_name': data['first_name'],
                 'last_name': data['last_name'],
                 'email': data['email'],
                 'student_employee_id': data['student_id'],
-                'role_id': role_id,
+                'role': 'user',  # Default role - cannot be changed during registration
                 'status': 'active'
             }).execute()
 
@@ -227,9 +292,8 @@ class RegisterView(View):
                 'Account created successfully! Please check your email for confirmation.'
             )
 
-            # === REDIRECT TO CORRECT PORTAL BASED ON ROLE ===
-            redirect_portal = 'admin' if data['role'] == 'admin' else 'student'
-            return redirect('signin', portal=redirect_portal)
+            # Redirect to unified login page
+            return redirect('login')
 
         except Exception as e:
             # If DB insert fails, optionally delete the auth user (cleanup)
@@ -241,96 +305,12 @@ class RegisterView(View):
             return render(request, 'register.html', {'form': form})
 
 class LoginView(View):
+    """Legacy portal-based login - redirects to unified login"""
     def get(self, request, portal='student'):
-        form = LoginForm()
-        template = f'signin_{portal}.html' if portal in ['admin', 'student'] else 'signin.html'
-        return render(request, template, {'form': form})
-
+        return redirect('login')
+    
     def post(self, request, portal='student'):
-        form = LoginForm(request.POST)
-        if not form.is_valid():
-            tmpl = f'signin_{portal}.html' if portal in ['admin', 'student'] else 'signin.html'
-            return render(request, tmpl, {'form': form})
-
-        id_input = form.cleaned_data['id']
-        password = form.cleaned_data['password']
-
-        try:
-            user_resp = supabase.table('users')\
-                .select('email, role_id')\
-                .eq('student_employee_id', id_input)\
-                .execute()
-        except Exception as e:
-            messages.error(request, f'Error connecting to database: {str(e)}')
-            tmpl = f'signin_{portal}.html' if portal in ['admin', 'student'] else 'signin.html'
-            return render(request, tmpl, {'form': form})
-
-        if not user_resp.data:
-            messages.error(request, 'ID not found.')
-            tmpl = f'signin_{portal}.html' if portal in ['admin', 'student'] else 'signin.html'
-            return render(request, tmpl, {'form': form})
-
-        email   = user_resp.data[0]['email']
-        role_id = user_resp.data[0]['role_id']
-
-        try:
-            auth_resp = supabase.auth.sign_in_with_password(
-                {"email": email, "password": password}
-            )
-        except Exception as e:
-            messages.error(request, f'Authentication error: {str(e)}')
-            tmpl = f'signin_{portal}.html' if portal in ['admin', 'student'] else 'signin.html'
-            return render(request, tmpl, {'form': form})
-
-        if not auth_resp.session:
-            error_msg = 'Invalid credentials.'
-            if hasattr(auth_resp, 'error') and auth_resp.error:
-                error_msg = auth_resp.error.message or error_msg
-            messages.error(request, error_msg)
-            tmpl = f'signin_{portal}.html' if portal in ['admin', 'student'] else 'signin.html'
-            return render(request, tmpl, {'form': form})
-
-
-        request.session['access_token'] = auth_resp.session.access_token
-        request.session['user_id']      = auth_resp.user.id
-
-
-        try:
-            role_resp = supabase.table('roles')\
-                .select('role_name')\
-                .eq('role_id', role_id)\
-                .execute()
-        except Exception as e:
-            messages.error(request, f'Error fetching role: {str(e)}')
-            tmpl = f'signin_{portal}.html' if portal in ['admin', 'student'] else 'signin.html'
-            return render(request, tmpl, {'form': form})
-
-        role_name = role_resp.data[0]['role_name'] if role_resp.data else 'student'
-
-
-        if portal == 'student' and role_name == 'admin':
-            # Admin was forced into the student form – give a nice message and redirect
-            messages.success(request, 'Admin account detected – redirecting to Admin Portal.')
-            return redirect('signin', portal='admin')
-
-        if portal == 'admin' and role_name != 'admin':
-            # Wrong portal – log out and push to the right one
-            supabase.auth.sign_out()
-            request.session.flush()
-            messages.error(request, 'Please use the Academic Portal to log in.')
-            return redirect('signin', portal='student')
-
-        # Store role in session for later use
-        request.session['role_name'] = role_name
-
-        messages.success(request, 'Login successful!')
-        
-        # Redirect based on role
-        if role_name == 'admin':
-            return redirect('dashboard')
-        else:
-            # Students and other roles go to parking spaces
-            return redirect('user_dashboard')
+        return redirect('login')
 
 def logout_view(request):
     supabase.auth.sign_out()
@@ -342,19 +322,18 @@ class DashboardView(View):
     def get(self, request):
         if 'access_token' not in request.session:
             messages.error(request, 'Please log in first.')
-            return redirect('signin', portal='student')
+            return redirect('login')
 
         try:
             user_id = request.session.get('user_id')
-            user_response = supabase.table('users').select('first_name, last_name, email, student_employee_id, role_id').eq('id', user_id).execute()
+            user_response = supabase.table('users').select('first_name, last_name, email, student_employee_id, role').eq('id', user_id).execute()
 
             if not user_response.data:
                 messages.error(request, 'User not found.')
                 return redirect('home')
 
             user_data = user_response.data[0]
-            role_response = supabase.table('roles').select('role_name').eq('role_id', user_data['role_id']).execute()
-            role_name = role_response.data[0]['role_name'] if role_response.data else 'student'
+            role_name = user_data.get('role', 'user')
         except ValueError as e:
             # Supabase credentials not configured
             messages.error(request, 'Server configuration error. Please contact administrator.')
@@ -367,7 +346,7 @@ class DashboardView(View):
         # Only allow admins to access this dashboard
         if role_name != 'admin':
             messages.error(request, 'Access denied. Admins only.')
-            return redirect('home')
+            return redirect('user_dashboard')
 
         now = timezone.now()
         start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -509,12 +488,12 @@ class UserDashboardView(View):
     def get(self, request):
         if 'access_token' not in request.session:
             messages.error(request, 'Please log in first.')
-            return redirect('signin', portal='student')
+            return redirect('login')
 
         try:
             user_id = request.session.get('user_id')
             user_response = supabase.table('users').select(
-                'first_name, last_name, email, student_employee_id, role_id'
+                'first_name, last_name, email, student_employee_id, role'
             ).eq('id', user_id).execute()
 
             if not user_response.data:
@@ -522,15 +501,9 @@ class UserDashboardView(View):
                 return redirect('home')
 
             user_data = user_response.data[0]
+            role_name = user_data.get('role', 'user')
 
-            # Fetch role
-            role_response = supabase.table('roles').select('role_name').eq(
-                'role_id', user_data['role_id']
-            ).execute()
-
-            role_name = role_response.data[0]['role_name'] if role_response.data else 'student'
-
-            # Prevent admin from entering student dashboard
+            # Prevent admin from entering user dashboard
             if role_name == 'admin':
                 return redirect('dashboard')
 
@@ -823,12 +796,12 @@ class ParkingSpacesView(View):
     def get(self, request):
         if 'access_token' not in request.session:
             messages.error(request, 'Please log in first.')
-            return redirect('signin', portal='student')
+            return redirect('login')
 
         try:
             user_id = request.session.get('user_id')
             user_response = supabase.table('users').select(
-                'first_name, last_name, email, student_employee_id, role_id'
+                'first_name, last_name, email, student_employee_id, role'
             ).eq('id', user_id).execute()
 
             if not user_response.data:
@@ -836,10 +809,7 @@ class ParkingSpacesView(View):
                 return redirect('home')
 
             user_data = user_response.data[0]
-            role_response = supabase.table('roles').select('role_name').eq(
-                'role_id', user_data['role_id']
-            ).execute()
-            role_name = role_response.data[0]['role_name'] if role_response.data else 'student'
+            role_name = user_data.get('role', 'user')
         except ValueError:
             messages.error(request, 'Server configuration error. Please contact administrator.')
             return redirect('home')
@@ -847,10 +817,10 @@ class ParkingSpacesView(View):
             messages.error(request, f'Database error: {str(e)}')
             return redirect('home')
 
-    # Only allow admins to manage parking slots
+        # Only allow admins to manage parking slots
         if role_name != 'admin':
             messages.error(request, 'Access denied. Admins only.')
-            return redirect('home')
+            return redirect('user_dashboard')
 
         lots, all_slots = fetch_parking_data()
         if not lots or not all_slots:
@@ -882,12 +852,12 @@ class StudentParkingSpacesView(View):
     def get(self, request):
         if 'access_token' not in request.session:
             messages.error(request, 'Please log in first.')
-            return redirect('signin', portal='student')
+            return redirect('login')
 
         try:
             user_id = request.session.get('user_id')
             user_response = supabase.table('users').select(
-                'first_name, last_name, email, student_employee_id, role_id'
+                'first_name, last_name, email, student_employee_id, role'
             ).eq('id', user_id).execute()
 
             if not user_response.data:
@@ -895,10 +865,7 @@ class StudentParkingSpacesView(View):
                 return redirect('home')
 
             user_data = user_response.data[0]
-            role_response = supabase.table('roles').select('role_name').eq(
-                'role_id', user_data['role_id']
-            ).execute()
-            role_name = role_response.data[0]['role_name'] if role_response.data else 'student'
+            role_name = user_data.get('role', 'user')
         except Exception as e:
             messages.error(request, f'Database error: {str(e)}')
             return redirect('home')
@@ -931,19 +898,18 @@ class ManageUsersView(View):
     def get(self, request):
         if 'access_token' not in request.session:
             messages.error(request, 'Please log in first.')
-            return redirect('signin', portal='student')
+            return redirect('login')
 
         try:
             user_id = request.session.get('user_id')
-            user_response = supabase.table('users').select('first_name, last_name, email, student_employee_id, role_id').eq('id', user_id).execute()
+            user_response = supabase.table('users').select('first_name, last_name, email, student_employee_id, role').eq('id', user_id).execute()
 
             if not user_response.data:
                 messages.error(request, 'User not found.')
                 return redirect('home')
 
             user_data = user_response.data[0]
-            role_response = supabase.table('roles').select('role_name').eq('role_id', user_data['role_id']).execute()
-            role_name = role_response.data[0]['role_name'] if role_response.data else 'student'
+            role_name = user_data.get('role', 'user')
         except ValueError as e:
             # Supabase credentials not configured
             messages.error(request, 'Server configuration error. Please contact administrator.')
@@ -956,11 +922,11 @@ class ManageUsersView(View):
         # Only allow admins to access this page
         if role_name != 'admin':
             messages.error(request, 'Access denied. Admins only.')
-            return redirect('home')
+            return redirect('user_dashboard')
 
         try:
             users_response = supabase.table('users').select(
-                'id, first_name, last_name, student_employee_id, status, created_at, roles(role_name)'
+                'id, first_name, last_name, student_employee_id, status, created_at, role'
             ).order('created_at', desc=True).execute()
             raw_users = users_response.data or []
         except Exception as e:
@@ -983,8 +949,7 @@ class ManageUsersView(View):
             first = (item.get('first_name') or '').strip()
             last = (item.get('last_name') or '').strip()
             full_name = (f"{first} {last}").strip() or '—'
-            role_data = item.get('roles') or {}
-            role_label = (role_data.get('role_name') or '—').title()
+            role_label = (item.get('role') or 'user').title()
             status_label = (item.get('status') or 'unknown').title()
             date_added = format_date(item.get('created_at'))
 
@@ -1015,12 +980,12 @@ class EditUserView(View):
     def _require_admin(self, request):
         if 'access_token' not in request.session:
             messages.error(request, 'Please log in first.')
-            return None, None, redirect('signin', portal='student')
+            return None, None, redirect('login')
 
         try:
             current_user_id = request.session.get('user_id')
             user_response = supabase.table('users').select(
-                'first_name, last_name, email, student_employee_id, role_id'
+                'first_name, last_name, email, student_employee_id, role'
             ).eq('id', current_user_id).execute()
 
             if not user_response.data:
@@ -1028,10 +993,7 @@ class EditUserView(View):
                 return None, None, redirect('home')
 
             current_user = user_response.data[0]
-            role_response = supabase.table('roles').select('role_name').eq(
-                'role_id', current_user['role_id']
-            ).execute()
-            role_name = role_response.data[0]['role_name'] if role_response.data else 'student'
+            role_name = current_user.get('role', 'user')
         except ValueError:
             messages.error(request, 'Server configuration error. Please contact administrator.')
             return None, None, redirect('home')
@@ -1041,14 +1003,14 @@ class EditUserView(View):
 
         if role_name != 'admin':
             messages.error(request, 'Access denied. Admins only.')
-            return None, None, redirect('home')
+            return None, None, redirect('user_dashboard')
 
         return current_user, role_name, None
 
     def _load_target_user_and_roles(self, user_id):
         # Load target user
         user_resp = supabase.table('users').select(
-            'id, first_name, last_name, student_employee_id, role_id, status'
+            'id, first_name, last_name, student_employee_id, role, status'
         ).eq('id', user_id).execute()
 
         if not user_resp.data:
@@ -1056,11 +1018,11 @@ class EditUserView(View):
 
         target = user_resp.data[0]
 
-        # Load all possible roles
-        roles_resp = supabase.table('roles').select('role_id, role_name').order(
-            'role_name'
-        ).execute()
-        roles = roles_resp.data or []
+        # Available roles (only "user" and "admin")
+        roles = [
+            {'role': 'user', 'role_name': 'User'},
+            {'role': 'admin', 'role_name': 'Admin'}
+        ]
 
         return target, roles
 
@@ -1099,9 +1061,9 @@ class EditUserView(View):
         first_name = (request.POST.get('first_name') or '').strip()
         last_name = (request.POST.get('last_name') or '').strip()
         username = (request.POST.get('username') or '').strip()
-        role_id_raw = request.POST.get('role_id')
+        role_raw = request.POST.get('role')
 
-        if not first_name or not last_name or not username or not role_id_raw:
+        if not first_name or not last_name or not username or not role_raw:
             messages.error(request, 'All fields are required.')
             context = {
                 'role': role_name,
@@ -1115,17 +1077,27 @@ class EditUserView(View):
             }
             return render(request, 'edit_user.html', context)
 
-        try:
-            try:
-                role_id = int(role_id_raw)
-            except (TypeError, ValueError):
-                role_id = role_id_raw
+        # Validate role - only "user" or "admin" allowed
+        if role_raw not in ['user', 'admin']:
+            messages.error(request, 'Invalid role. Must be "user" or "admin".')
+            context = {
+                'role': role_name,
+                'full_name': f"{current_user['first_name']} {current_user['last_name']}",
+                'first_name': current_user['first_name'],
+                'last_name': current_user['last_name'],
+                'email': current_user['email'],
+                'username': current_user['student_employee_id'],
+                'target_user': target_user,
+                'roles': roles,
+            }
+            return render(request, 'edit_user.html', context)
 
+        try:
             supabase.table('users').update({
                 'first_name': first_name,
                 'last_name': last_name,
                 'student_employee_id': username,
-                'role_id': role_id,
+                'role': role_raw,  # Direct role field
             }).eq('id', user_id).execute()
 
             messages.success(request, 'User updated successfully.')
@@ -1148,12 +1120,12 @@ class EditUserView(View):
 def _set_user_status(request, user_id, new_status, success_message):
     if 'access_token' not in request.session:
         messages.error(request, 'Please log in first.')
-        return redirect('signin', portal='student')
+        return redirect('login')
 
     try:
         current_user_id = request.session.get('user_id')
         user_response = supabase.table('users').select(
-            'role_id'
+            'role'
         ).eq('id', current_user_id).execute()
 
         if not user_response.data:
@@ -1161,17 +1133,14 @@ def _set_user_status(request, user_id, new_status, success_message):
             return redirect('home')
 
         current_user = user_response.data[0]
-        role_response = supabase.table('roles').select('role_name').eq(
-            'role_id', current_user['role_id']
-        ).execute()
-        role_name = role_response.data[0]['role_name'] if role_response.data else 'student'
+        role_name = current_user.get('role', 'user')
     except Exception as e:
         messages.error(request, f'Database error: {str(e)}')
         return redirect('home')
 
     if role_name != 'admin':
         messages.error(request, 'Access denied. Admins only.')
-        return redirect('home')
+        return redirect('user_dashboard')
 
     try:
         supabase.table('users').update({'status': new_status}).eq('id', user_id).execute()
@@ -1196,13 +1165,11 @@ class AddUserView(View):
     """Create a new user account (admin only)."""
 
     def _load_roles(self):
-        try:
-            roles_resp = supabase.table('roles').select('role_id, role_name').order(
-                'role_name'
-            ).execute()
-            return roles_resp.data or []
-        except Exception:
-            return []
+        # Available roles (only "user" and "admin")
+        return [
+            {'role': 'user', 'role_name': 'User'},
+            {'role': 'admin', 'role_name': 'Admin'}
+        ]
 
     def _render_form(self, request, template_user, role_name, roles, form_values=None):
         form_values = form_values or {}
@@ -1218,19 +1185,19 @@ class AddUserView(View):
             'form_last_name': form_values.get('last_name', ''),
             'form_username': form_values.get('username', ''),
             'form_email': form_values.get('email', ''),
-            'form_role_id': form_values.get('role_id', ''),
+            'form_role': form_values.get('role', ''),
         }
         return render(request, 'add_user.html', context)
 
     def _require_admin(self, request):
         if 'access_token' not in request.session:
             messages.error(request, 'Please log in first.')
-            return None, None, redirect('signin', portal='student')
+            return None, None, redirect('login')
 
         try:
             current_user_id = request.session.get('user_id')
             user_response = supabase.table('users').select(
-                'first_name, last_name, email, student_employee_id, role_id'
+                'first_name, last_name, email, student_employee_id, role'
             ).eq('id', current_user_id).execute()
 
             if not user_response.data:
@@ -1238,10 +1205,7 @@ class AddUserView(View):
                 return None, None, redirect('home')
 
             current_user = user_response.data[0]
-            role_response = supabase.table('roles').select('role_name').eq(
-                'role_id', current_user['role_id']
-            ).execute()
-            role_name = role_response.data[0]['role_name'] if role_response.data else 'student'
+            role_name = current_user.get('role', 'user')
         except ValueError:
             messages.error(request, 'Server configuration error. Please contact administrator.')
             return None, None, redirect('home')
@@ -1251,7 +1215,7 @@ class AddUserView(View):
 
         if role_name != 'admin':
             messages.error(request, 'Access denied. Admins only.')
-            return None, None, redirect('home')
+            return None, None, redirect('user_dashboard')
 
         return current_user, role_name, None
 
@@ -1274,25 +1238,25 @@ class AddUserView(View):
         last_name = (request.POST.get('last_name') or '').strip()
         username = (request.POST.get('username') or '').strip()
         email = (request.POST.get('email') or '').strip()
-        role_id_raw = request.POST.get('role_id')
+        role_raw = request.POST.get('role')
         form_values = {
             'first_name': first_name,
             'last_name': last_name,
             'username': username,
             'email': email,
-            'role_id': role_id_raw or '',
+            'role': role_raw or '',
         }
 
-        if not first_name or not last_name or not username or not email or not role_id_raw:
+        if not first_name or not last_name or not username or not email or not role_raw:
             messages.error(request, 'All fields are required.')
             return self._render_form(request, current_user, role_name, roles, form_values)
 
-        try:
-            try:
-                role_id = int(role_id_raw)
-            except (TypeError, ValueError):
-                role_id = role_id_raw
+        # Validate role - only "user" or "admin" allowed
+        if role_raw not in ['user', 'admin']:
+            messages.error(request, 'Invalid role. Must be "user" or "admin".')
+            return self._render_form(request, current_user, role_name, roles, form_values)
 
+        try:
             auth_user = None
             admin_error = None
 
@@ -1328,14 +1292,14 @@ class AddUserView(View):
                 messages.error(request, f'Failed to create auth user: {detail}')
                 return self._render_form(request, current_user, role_name, roles, form_values)
 
-            # Insert into users profile table
+            # Insert into users profile table with role field
             supabase.table('users').insert({
                 'id': auth_user.id,
                 'first_name': first_name,
                 'last_name': last_name,
                 'email': email,
                 'student_employee_id': username,
-                'role_id': role_id,
+                'role': role_raw,  # Direct role field
                 'status': 'active',
             }).execute()
 
@@ -1349,29 +1313,78 @@ class AddUserView(View):
             return self._render_form(request, current_user, role_name, roles, form_values)
 
 
+from django.http import JsonResponse
+import json
+
+def update_user_role(request, user_id):
+    """
+    Admin-only API endpoint to update a user's role.
+    Only authenticated users with role="admin" can access this endpoint.
+    Supports both POST (form data) and PUT/PATCH (JSON) requests.
+    """
+    if request.method not in ['POST', 'PUT', 'PATCH']:
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    if 'access_token' not in request.session:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    try:
+        # Verify current user is admin
+        current_user_id = request.session.get('user_id')
+        current_user_response = supabase.table('users').select('role').eq('id', current_user_id).execute()
+        
+        if not current_user_response.data:
+            return JsonResponse({'error': 'User not found'}, status=404)
+        
+        current_role = current_user_response.data[0].get('role', 'user')
+        if current_role != 'admin':
+            return JsonResponse({'error': 'Admin privileges required'}, status=403)
+        
+        # Get new role from request
+        if request.content_type and 'application/json' in request.content_type:
+            try:
+                data = json.loads(request.body)
+            except json.JSONDecodeError:
+                return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        else:
+            data = request.POST
+        
+        new_role = data.get('role', '').strip().lower()
+        
+        # Validate role
+        if new_role not in ['user', 'admin']:
+            return JsonResponse({'error': 'Invalid role. Must be "user" or "admin"'}, status=400)
+        
+        # Update user role
+        supabase.table('users').update({'role': new_role}).eq('id', user_id).execute()
+        
+        return JsonResponse({'success': True, 'message': f'User role updated to {new_role}'})
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
 @require_POST
 def update_parking_slot_status(request, slot_id):
     if 'access_token' not in request.session:
         messages.error(request, 'Please log in first.')
-        return redirect('signin', portal='student')
+        return redirect('login')
 
     try:
         current_user_id = request.session.get('user_id')
-        user_response = supabase.table('users').select('role_id').eq('id', current_user_id).execute()
+        user_response = supabase.table('users').select('role').eq('id', current_user_id).execute()
         if not user_response.data:
             messages.error(request, 'User not found.')
             return redirect('home')
 
-        role_id = user_response.data[0]['role_id']
-        role_resp = supabase.table('roles').select('role_name').eq('role_id', role_id).execute()
-        role_name = role_resp.data[0]['role_name'] if role_resp.data else 'student'
+        role_name = user_response.data[0].get('role', 'user')
     except Exception as e:
         messages.error(request, f'Database error: {str(e)}')
         return redirect('home')
 
     if role_name != 'admin':
         messages.error(request, 'Access denied. Admins only.')
-        return redirect('home')
+        return redirect('user_dashboard')
 
     redirect_lot = request.POST.get('lot_id')
     status = (request.POST.get('status') or '').lower()

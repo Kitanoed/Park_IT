@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container">
+  <div class="login-card">
+    <div class="logo-header">
+      <img src="{% static 'images/cit.png' %}" alt="CIT-U Logo">
+      <div class="logo-header-text">
+        <div class="university-name">Cebu Institute of Technology - University</div>
+        <div class="online-badge">Online</div>
+      </div>
+    </div>
+
+    <div class="text-center">
+      <h3 class="welcome-title">Welcome to <span style="color:#b71c1c;">Park</span><span style="color:#ffb400;">IT!</span></h3>
+      <p class="welcome-subtitle">Sign in to access your account</p>
+    </div>
+
+    <form method="POST" action="{% url 'login' %}" novalidate>
+      {% csrf_token %}
+      {{ form|crispy }}
+      <button type="submit" class="btn btn-signin w-100">Sign In</button>
+    </form>
+
+    <p class="auth-note">Don't have an account? <a href="{% url 'register' %}">Register here</a></p>
+  </div>
+</div>
+{% endblock %}
+
