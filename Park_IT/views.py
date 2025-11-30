@@ -1433,3 +1433,47 @@ def update_parking_slot_status(request, slot_id):
     if redirect_lot:
         redirect_url = f"{redirect_url}?lot={redirect_lot}"
     return redirect(redirect_url)
+
+
+class AdminParkingHistoryView(View):
+    """Admin view for parking history with search, filter, and pagination"""
+    def get(self, request):
+        if 'access_token' not in request.session:
+            messages.error(request, 'Please log in first.')
+            return redirect('login')
+
+        try:
+            user_id = request.session.get('user_id')
+            user_response = supabase.table('users').select('first_name, last_name, email, student_employee_id, role').eq('id', user_id).execute()
+
+            if not user_response.data:
+                messages.error(request, 'User not found.')
+                return redirect('home')
+
+            user_data = user_response.data[0]
+            # Normalize role: convert to lowercase, handle NULL/empty, default to 'user'
+            raw_role = user_data.get('role') or 'user'
+            role_name = str(raw_role).strip().lower() if raw_role else 'user'
+            if role_name not in ['admin', 'user']:
+                role_name = 'user'
+        except ValueError:
+            messages.error(request, 'Server configuration error. Please contact administrator.')
+            return redirect('home')
+        except Exception as e:
+            messages.error(request, f'Database error: {str(e)}')
+            return redirect('home')
+
+        # Only allow admins to access this page
+        if role_name != 'admin':
+            messages.error(request, 'Access denied. Admins only.')
+            return redirect('user_dashboard')
+
+        context = {
+            'role': role_name,
+            'full_name': f"{user_data['first_name']} {user_data['last_name']}",
+            'first_name': user_data['first_name'],
+            'last_name': user_data['last_name'],
+            'email': user_data['email'],
+            'username': user_data['student_employee_id'],
+        }
+        return render(request, 'admin_parking_history.html', context)

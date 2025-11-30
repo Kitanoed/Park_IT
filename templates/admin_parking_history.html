@@ -1,0 +1,912 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Admin - Parking History{% endblock %}
+
+{% block content %}
+<style>
+  :root{
+    --brand-red:#b71c1c;
+    --brand-orange:#f57c00;
+    --win-red:#ff5f57;
+    --win-yellow:#ffbd2e;
+    --win-green:#28c840;
+    --bar-red:#e53935;
+    --bar-yellow:#ffb400;
+    --bar-green:#2fbf4a;
+    --surface:#ffffff;
+    --border:#eef0f3;
+    --text:#111827;
+    --muted:#6b7280;
+    --canvas-bg:#f5f7fa;
+  }
+
+  body{ background:var(--canvas-bg); }
+
+  .dashboard-wrap{
+    width:100%;
+    max-width: 1520px;
+    margin:0 auto;
+    padding:18px 18px 26px;
+  }
+
+  .app{
+    display:grid;
+    grid-template-columns: 270px 1fr;
+    gap:14px;
+    min-height: calc(100vh - 80px);
+  }
+
+  .sidebar{
+    background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;
+    display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);
+  }
+
+  .brand{
+    padding-bottom:10px;border-bottom:1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .dots-container{
+    display:flex;
+    gap:6px;
+    align-items:center;
+  }
+  .dot{width:10px;height:10px;border-radius:50%}
+  .dot.red{background:var(--win-red)}
+  .dot.yellow{background:var(--win-yellow)}
+  .dot.green{background:var(--win-green)}
+
+  .txt{line-height:1.1;}
+  .park-brand{
+    font-family: Montserrat, sans-serif;
+    font-weight:800;
+    letter-spacing:.2px;
+    font-size:17px;
+    line-height:1;
+  }
+  .park-brand .p1{ color:var(--brand-red); }
+  .park-brand .p2{ color:#ffb400; }
+  .txt .t2{font-weight:600;color:var(--muted);font-size:11px; margin-top:2px;}
+
+  .nav{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+  .nav a{
+    display:flex;align-items:center;gap:10px;text-decoration:none;
+    padding:11px 12px;border-radius:12px;border:1px solid var(--border);
+    color:var(--text); background:#fff; transition:.2s;
+  }
+  .nav a:hover{transform:translateY(-1px); border-color:var(--brand-red); color:var(--brand-red)}
+  .nav a.active{
+    background: linear-gradient(135deg,var(--brand-red) 0%, var(--brand-orange) 100%);
+    color:#fff; border-color:transparent;
+  }
+  .ico{
+    width:28px;height:28px;border-radius:8px;background:#f8f9fa;
+    display:flex;align-items:center;justify-content:center;color:#6b7280;font-weight:700;
+  }
+  .spacer{flex:1}
+
+  .profile{
+    padding:12px;border:1px solid var(--border);border-radius:12px;background:#fff;
+    display:flex;align-items:center;gap:10px;
+    cursor:pointer;
+    transition: all 0.2s;
+  }
+  .profile:hover{
+    border-color:var(--brand-red);
+    background:#fff5f5;
+  }
+  .avatar{width:30px;height:30px;border-radius:50%;background:#f3f4f6}
+  .nm{font-weight:600;font-size:12px;color:var(--text)}
+  .em{font-size:11px;color:var(--muted)}
+
+  .main{
+    background:#fff;border:1px solid var(--border);border-radius:12px;
+    box-shadow:0 1px 2px rgba(0,0,0,.04); padding:20px;
+  }
+
+  .page-header{
+    margin-bottom:20px;
+    padding-bottom:12px;
+    border-bottom:1px solid var(--border);
+  }
+  .page-title{
+    font-size:20px;
+    font-weight:700;
+    color:var(--text);
+    margin:0 0 4px;
+  }
+  .page-subtitle{
+    font-size:13px;
+    color:var(--muted);
+    margin:0;
+  }
+
+  /* Filter Card */
+  .filter-card{
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:18px;
+    margin-bottom:18px;
+    box-shadow:0 1px 2px rgba(0,0,0,.04);
+  }
+
+  .filter-header{
+    margin-bottom:16px;
+  }
+
+  .filter-title{
+    font-size:16px;
+    font-weight:700;
+    color:var(--text);
+    margin:0;
+  }
+
+  .filter-form{
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+
+  .filter-row{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
+    gap:14px;
+  }
+
+  .filter-group{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+
+  .filter-group-full{
+    grid-column:1 / -1;
+  }
+
+  .filter-label{
+    font-size:12px;
+    font-weight:600;
+    color:var(--text);
+  }
+
+  .filter-input,
+  .filter-select{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid var(--border);
+    border-radius:10px;
+    font-size:13px;
+    color:var(--text);
+    background:#f8f9fa;
+    font-family:inherit;
+    transition:all 0.2s;
+  }
+
+  .filter-input:focus,
+  .filter-select:focus{
+    outline:none;
+    border-color:var(--brand-red);
+    background:#fff;
+  }
+
+  .filter-actions{
+    display:flex;
+    gap:10px;
+    justify-content:flex-end;
+    margin-top:4px;
+  }
+
+  .btn-filter-apply,
+  .btn-filter-clear{
+    padding:10px 18px;
+    border:none;
+    border-radius:10px;
+    font-weight:700;
+    font-size:13px;
+    cursor:pointer;
+    transition:all 0.2s;
+    height:36px;
+  }
+
+  .btn-filter-apply{
+    background:linear-gradient(135deg,var(--brand-red) 0%, var(--brand-orange) 100%);
+    color:#fff;
+  }
+
+  .btn-filter-apply:hover{
+    filter:brightness(1.1);
+    transform:translateY(-1px);
+  }
+
+  .btn-filter-clear{
+    background:#fff;
+    color:var(--text);
+    border:1px solid var(--border);
+  }
+
+  .btn-filter-clear:hover{
+    border-color:var(--brand-red);
+    color:var(--brand-red);
+    transform:translateY(-1px);
+  }
+
+  /* Table Section */
+  .table-section{
+    margin-top:18px;
+  }
+
+  .table-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:14px;
+  }
+
+  .table-title{
+    font-size:16px;
+    font-weight:700;
+    color:var(--text);
+    margin:0;
+  }
+
+  .table-info{
+    font-size:12px;
+    color:var(--muted);
+  }
+
+  .table-responsive{
+    overflow-x:auto;
+    border:1px solid var(--border);
+    border-radius:10px;
+  }
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+    min-width:1000px;
+  }
+
+  th,td{
+    padding:12px 10px;
+    border-bottom:1px solid var(--border);
+    text-align:left;
+    color:var(--text);
+  }
+
+  th{
+    font-weight:700;
+    background:#f8f9fa;
+    font-size:13px;
+    position:sticky;
+    top:0;
+  }
+
+  .sortable{
+    cursor:pointer;
+    user-select:none;
+    transition:background 0.2s;
+  }
+
+  .sortable:hover{
+    background:#f0f1f3;
+  }
+
+  .sort-active{
+    background:#fff5f5;
+  }
+
+  .sort-indicator{
+    margin-left:4px;
+    color:var(--brand-red);
+    font-weight:700;
+  }
+
+  tbody tr:hover{
+    background:#f8f9fa;
+  }
+
+  .table-cell{
+    font-size:13px;
+  }
+
+  .status-badge{
+    display:inline-block;
+    padding:4px 10px;
+    border-radius:6px;
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+  }
+
+  .status-completed{
+    background:#ecfdf3;
+    color:#166534;
+    border:1px solid #bbf7d0;
+  }
+
+  .status-active{
+    background:#eff6ff;
+    color:#1e3a8a;
+    border:1px solid #bfdbfe;
+  }
+
+  .status-error{
+    background:#fef2f2;
+    color:#991b1b;
+    border:1px solid #fecaca;
+  }
+
+  .no-results{
+    text-align:center;
+    padding:40px 20px;
+    color:var(--muted);
+    font-size:13px;
+  }
+
+  /* Pagination */
+  .pagination-wrapper{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-top:18px;
+    padding-top:18px;
+    border-top:1px solid var(--border);
+  }
+
+  .pagination-info{
+    font-size:13px;
+    color:var(--text);
+    font-weight:600;
+  }
+
+  .pagination-buttons{
+    display:flex;
+    gap:10px;
+  }
+
+  .btn-pagination{
+    padding:8px 16px;
+    border:1px solid var(--border);
+    border-radius:10px;
+    background:#fff;
+    color:var(--text);
+    font-weight:700;
+    font-size:13px;
+    cursor:pointer;
+    transition:all 0.2s;
+  }
+
+  .btn-pagination:hover:not(:disabled){
+    border-color:var(--brand-red);
+    color:var(--brand-red);
+    transform:translateY(-1px);
+  }
+
+  .btn-pagination:disabled{
+    opacity:0.5;
+    cursor:not-allowed;
+  }
+
+  @media (max-width: 1280px){
+    .dashboard-wrap{max-width: 1240px;}
+  }
+  @media (max-width: 1024px){
+    .app{grid-template-columns: 1fr;}
+    .filter-row{grid-template-columns: 1fr;}
+    table{font-size: 12px;}
+    th,td{padding: 10px 8px;}
+  }
+</style>
+
+<div class="dashboard-wrap">
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="dots-container">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <div class="txt">
+          <div class="park-brand">
+            <span class="p1">Park</span><span class="p2">IT!</span>
+          </div>
+          <div class="t2">Online</div>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <a href="{% url 'dashboard' %}">
+          <span class="ico">▦</span><span>Dashboard</span>
+        </a>
+        <a href="{% url 'parking_spaces' %}">
+          <span class="ico">🅿</span><span>Parking Spaces</span>
+        </a>
+        <a class="active" href="{% url 'admin_parking_history' %}">
+          <span class="ico">📋</span><span>Parking History</span>
+        </a>
+        <a href="{% url 'manage_users' %}">
+          <span class="ico">👥</span><span>Manage Users</span>
+        </a>
+      </nav>
+
+      <div class="spacer"></div>
+
+      <div class="profile" onclick="window.location='{% url 'dashboard' %}'">
+        <div class="avatar"></div>
+        <div>
+          <div class="nm">{{ full_name|default:"User Name" }}</div>
+          <div class="em">{{ email|default:"user email" }}</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <section class="main">
+      <div class="page-header">
+        <h1 class="page-title">Parking History</h1>
+        <p class="page-subtitle">View and filter parking session records</p>
+      </div>
+
+      <!-- Filter and Search Section -->
+      <div id="filter-section" class="filter-card">
+        <div class="filter-header">
+          <h2 class="filter-title">Search & Filter</h2>
+        </div>
+        
+        <form id="filter-form" class="filter-form">
+          <div class="filter-row">
+            <!-- Global Search -->
+            <div class="filter-group filter-group-full">
+              <label for="search-plate" class="filter-label">Search by Plate Number</label>
+              <input 
+                type="text" 
+                id="search-plate" 
+                name="search-plate" 
+                class="filter-input" 
+                placeholder="Enter license plate number..."
+                autocomplete="off"
+              />
+            </div>
+          </div>
+
+          <div class="filter-row">
+            <!-- Date Range -->
+            <div class="filter-group">
+              <label for="date-from" class="filter-label">From Date</label>
+              <input 
+                type="date" 
+                id="date-from" 
+                name="date-from" 
+                class="filter-input"
+              />
+            </div>
+            
+            <div class="filter-group">
+              <label for="date-to" class="filter-label">To Date</label>
+              <input 
+                type="date" 
+                id="date-to" 
+                name="date-to" 
+                class="filter-input"
+              />
+            </div>
+
+            <!-- Location Filter -->
+            <div class="filter-group">
+              <label for="lot-filter" class="filter-label">Location</label>
+              <select id="lot-filter" name="lot-filter" class="filter-select">
+                <option value="">All Lots</option>
+                <option value="Lot A - Main">Lot A - Main</option>
+                <option value="Lot B - Overflow">Lot B - Overflow</option>
+                <option value="North Gate Extension">North Gate Extension</option>
+                <option value="Academic Lot">Academic Lot</option>
+                <option value="BC Lot">BC Lot</option>
+                <option value="Gym Lot">Gym Lot</option>
+              </select>
+            </div>
+
+            <!-- Status Filter -->
+            <div class="filter-group">
+              <label for="status-filter" class="filter-label">Status</label>
+              <select id="status-filter" name="status-filter" class="filter-select">
+                <option value="">All</option>
+                <option value="Completed">Completed</option>
+                <option value="Active">Active</option>
+                <option value="Error">Error</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="filter-actions">
+            <button type="button" id="clear-filters" class="btn-filter-clear">Clear Filters</button>
+            <button type="button" id="apply-filters" class="btn-filter-apply">Apply Filters</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Parking History Table -->
+      <div class="table-section">
+        <div class="table-header">
+          <h2 class="table-title">Parking Sessions</h2>
+          <div class="table-info" id="results-count">Showing 0 results</div>
+        </div>
+
+        <div class="table-responsive">
+          <table id="parking-history-table" class="parking-table">
+            <thead>
+              <tr>
+                <th class="sortable" data-sort="session_id">
+                  Session ID
+                  <span class="sort-indicator"></span>
+                </th>
+                <th class="sortable" data-sort="plate_number">
+                  Plate Number
+                  <span class="sort-indicator"></span>
+                </th>
+                <th class="sortable" data-sort="lot_name">
+                  Location
+                  <span class="sort-indicator"></span>
+                </th>
+                <th class="sortable" data-sort="entry_time">
+                  Entry Time
+                  <span class="sort-indicator"></span>
+                </th>
+                <th class="sortable" data-sort="exit_time">
+                  Exit Time
+                  <span class="sort-indicator"></span>
+                </th>
+                <th class="sortable" data-sort="duration">
+                  Duration
+                  <span class="sort-indicator"></span>
+                </th>
+                <th class="sortable" data-sort="fee_usd">
+                  Fee (USD)
+                  <span class="sort-indicator"></span>
+                </th>
+                <th class="sortable" data-sort="status">
+                  Status
+                  <span class="sort-indicator"></span>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="table-body">
+              <!-- Table rows will be populated by JavaScript -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div id="pagination-controls" class="pagination-wrapper">
+          <div class="pagination-info">
+            <span id="page-info">Page 1 of 1</span>
+          </div>
+          <div class="pagination-buttons">
+            <button type="button" id="prev-page" class="btn-pagination" disabled>Previous</button>
+            <button type="button" id="next-page" class="btn-pagination" disabled>Next</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // Mock Data - Parking Sessions
+  const mockSessions = [
+    { session_id: 'SESS001', plate_number: 'ABC-1234', lot_name: 'Lot A - Main', entry_time: '2024-01-15T08:30:00', exit_time: '2024-01-15T12:45:00', duration: '4h 15m', fee_usd: 8.50, status: 'Completed' },
+    { session_id: 'SESS002', plate_number: 'XYZ-5678', lot_name: 'North Gate Extension', entry_time: '2024-01-15T09:15:00', exit_time: null, duration: '0h 0m', fee_usd: 0.00, status: 'Active' },
+    { session_id: 'SESS003', plate_number: 'DEF-9012', lot_name: 'Academic Lot', entry_time: '2024-01-15T10:00:00', exit_time: '2024-01-15T11:30:00', duration: '1h 30m', fee_usd: 3.00, status: 'Completed' },
+    { session_id: 'SESS004', plate_number: 'GHI-3456', lot_name: 'Lot B - Overflow', entry_time: '2024-01-15T11:20:00', exit_time: null, duration: '0h 0m', fee_usd: 0.00, status: 'Active' },
+    { session_id: 'SESS005', plate_number: 'JKL-7890', lot_name: 'BC Lot', entry_time: '2024-01-14T14:00:00', exit_time: '2024-01-14T18:45:00', duration: '4h 45m', fee_usd: 9.50, status: 'Completed' },
+    { session_id: 'SESS006', plate_number: 'MNO-2345', lot_name: 'Gym Lot', entry_time: '2024-01-14T15:30:00', exit_time: '2024-01-14T16:00:00', duration: '0h 30m', fee_usd: 1.00, status: 'Completed' },
+    { session_id: 'SESS007', plate_number: 'PQR-6789', lot_name: 'Lot A - Main', entry_time: '2024-01-14T16:15:00', exit_time: null, duration: '0h 0m', fee_usd: 0.00, status: 'Active' },
+    { session_id: 'SESS008', plate_number: 'STU-0123', lot_name: 'Academic Lot', entry_time: '2024-01-13T08:00:00', exit_time: '2024-01-13T17:30:00', duration: '9h 30m', fee_usd: 19.00, status: 'Completed' },
+    { session_id: 'SESS009', plate_number: 'VWX-4567', lot_name: 'North Gate Extension', entry_time: '2024-01-13T09:45:00', exit_time: '2024-01-13T12:15:00', duration: '2h 30m', fee_usd: 5.00, status: 'Completed' },
+    { session_id: 'SESS010', plate_number: 'YZA-8901', lot_name: 'Lot B - Overflow', entry_time: '2024-01-13T13:20:00', exit_time: null, duration: '0h 0m', fee_usd: 0.00, status: 'Active' },
+    { session_id: 'SESS011', plate_number: 'BCD-2345', lot_name: 'BC Lot', entry_time: '2024-01-12T10:00:00', exit_time: '2024-01-12T14:30:00', duration: '4h 30m', fee_usd: 9.00, status: 'Completed' },
+    { session_id: 'SESS012', plate_number: 'EFG-5678', lot_name: 'Gym Lot', entry_time: '2024-01-12T11:15:00', exit_time: '2024-01-12T13:45:00', duration: '2h 30m', fee_usd: 5.00, status: 'Completed' },
+    { session_id: 'SESS013', plate_number: 'HIJ-9012', lot_name: 'Lot A - Main', entry_time: '2024-01-12T15:00:00', exit_time: null, duration: '0h 0m', fee_usd: 0.00, status: 'Active' },
+    { session_id: 'SESS014', plate_number: 'KLM-3456', lot_name: 'Academic Lot', entry_time: '2024-01-11T08:30:00', exit_time: '2024-01-11T16:00:00', duration: '7h 30m', fee_usd: 15.00, status: 'Completed' },
+    { session_id: 'SESS015', plate_number: 'NOP-7890', lot_name: 'North Gate Extension', entry_time: '2024-01-11T09:00:00', exit_time: '2024-01-11T10:30:00', duration: '1h 30m', fee_usd: 3.00, status: 'Completed' },
+    { session_id: 'SESS016', plate_number: 'QRS-1234', lot_name: 'Lot B - Overflow', entry_time: '2024-01-11T12:00:00', exit_time: null, duration: '0h 0m', fee_usd: 0.00, status: 'Active' },
+    { session_id: 'SESS017', plate_number: 'TUV-5678', lot_name: 'BC Lot', entry_time: '2024-01-10T14:00:00', exit_time: '2024-01-10T18:00:00', duration: '4h 0m', fee_usd: 8.00, status: 'Completed' },
+    { session_id: 'SESS018', plate_number: 'WXY-9012', lot_name: 'Gym Lot', entry_time: '2024-01-10T15:30:00', exit_time: '2024-01-10T17:00:00', duration: '1h 30m', fee_usd: 3.00, status: 'Completed' },
+    { session_id: 'SESS019', plate_number: 'ZAB-3456', lot_name: 'Lot A - Main', entry_time: '2024-01-10T16:45:00', exit_time: null, duration: '0h 0m', fee_usd: 0.00, status: 'Active' },
+    { session_id: 'SESS020', plate_number: 'CDE-7890', lot_name: 'Academic Lot', entry_time: '2024-01-09T07:00:00', exit_time: '2024-01-09T19:00:00', duration: '12h 0m', fee_usd: 24.00, status: 'Completed' },
+    { session_id: 'SESS021', plate_number: 'FGH-2345', lot_name: 'North Gate Extension', entry_time: '2024-01-09T08:15:00', exit_time: '2024-01-09T11:45:00', duration: '3h 30m', fee_usd: 7.00, status: 'Completed' },
+    { session_id: 'SESS022', plate_number: 'IJK-6789', lot_name: 'Lot B - Overflow', entry_time: '2024-01-09T10:00:00', exit_time: null, duration: '0h 0m', fee_usd: 0.00, status: 'Active' },
+    { session_id: 'SESS023', plate_number: 'LMN-0123', lot_name: 'BC Lot', entry_time: '2024-01-08T13:00:00', exit_time: '2024-01-08T15:30:00', duration: '2h 30m', fee_usd: 5.00, status: 'Completed' },
+    { session_id: 'SESS024', plate_number: 'OPQ-4567', lot_name: 'Gym Lot', entry_time: '2024-01-08T14:20:00', exit_time: '2024-01-08T16:50:00', duration: '2h 30m', fee_usd: 5.00, status: 'Completed' },
+    { session_id: 'SESS025', plate_number: 'RST-8901', lot_name: 'Lot A - Main', entry_time: '2024-01-08T17:00:00', exit_time: null, duration: '0h 0m', fee_usd: 0.00, status: 'Active' },
+    { session_id: 'SESS026', plate_number: 'UVW-2345', lot_name: 'Academic Lot', entry_time: '2024-01-07T09:00:00', exit_time: '2024-01-07T13:15:00', duration: '4h 15m', fee_usd: 8.50, status: 'Completed' },
+    { session_id: 'SESS027', plate_number: 'XYZ-5678', lot_name: 'North Gate Extension', entry_time: '2024-01-07T10:30:00', exit_time: '2024-01-07T12:00:00', duration: '1h 30m', fee_usd: 3.00, status: 'Completed' },
+    { session_id: 'SESS028', plate_number: 'AAA-9012', lot_name: 'Lot B - Overflow', entry_time: '2024-01-07T11:45:00', exit_time: null, duration: '0h 0m', fee_usd: 0.00, status: 'Active' },
+    { session_id: 'SESS029', plate_number: 'BBB-3456', lot_name: 'BC Lot', entry_time: '2024-01-06T08:00:00', exit_time: '2024-01-06T20:00:00', duration: '12h 0m', fee_usd: 24.00, status: 'Completed' },
+    { session_id: 'SESS030', plate_number: 'CCC-7890', lot_name: 'Gym Lot', entry_time: '2024-01-06T14:00:00', exit_time: '2024-01-06T15:30:00', duration: '1h 30m', fee_usd: 3.00, status: 'Completed' },
+    { session_id: 'SESS031', plate_number: 'DDD-1234', lot_name: 'Lot A - Main', entry_time: '2024-01-06T16:00:00', exit_time: null, duration: '0h 0m', fee_usd: 0.00, status: 'Active' },
+    { session_id: 'SESS032', plate_number: 'EEE-5678', lot_name: 'Academic Lot', entry_time: '2024-01-05T07:30:00', exit_time: '2024-01-05T18:45:00', duration: '11h 15m', fee_usd: 22.50, status: 'Completed' }
+  ];
+
+  // State Management
+  let allSessions = [...mockSessions];
+  let filteredSessions = [...mockSessions];
+  let currentPage = 1;
+  const itemsPerPage = 10;
+  let currentSort = { field: null, direction: 'asc' };
+
+  // DOM Elements
+  const searchInput = document.getElementById('search-plate');
+  const dateFromInput = document.getElementById('date-from');
+  const dateToInput = document.getElementById('date-to');
+  const lotFilter = document.getElementById('lot-filter');
+  const statusFilter = document.getElementById('status-filter');
+  const applyFiltersBtn = document.getElementById('apply-filters');
+  const clearFiltersBtn = document.getElementById('clear-filters');
+  const tableBody = document.getElementById('table-body');
+  const resultsCount = document.getElementById('results-count');
+  const prevPageBtn = document.getElementById('prev-page');
+  const nextPageBtn = document.getElementById('next-page');
+  const pageInfo = document.getElementById('page-info');
+  const sortableHeaders = document.querySelectorAll('.sortable');
+
+  // Utility Functions
+  function formatDateTime(dateTimeString) {
+    if (!dateTimeString) return '—';
+    const date = new Date(dateTimeString);
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  }
+
+  function formatDate(dateString) {
+    if (!dateString) return '';
+    return dateString;
+  }
+
+  function isDateInRange(entryTime, dateFrom, dateTo) {
+    if (!dateFrom && !dateTo) return true;
+    
+    const entryDate = new Date(entryTime);
+    entryDate.setHours(0, 0, 0, 0);
+    
+    if (dateFrom) {
+      const fromDate = new Date(dateFrom);
+      fromDate.setHours(0, 0, 0, 0);
+      if (entryDate < fromDate) return false;
+    }
+    
+    if (dateTo) {
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999);
+      if (entryDate > toDate) return false;
+    }
+    
+    return true;
+  }
+
+  // Filter Functions
+  function applyFilters() {
+    const searchTerm = searchInput.value.trim().toLowerCase();
+    const dateFrom = dateFromInput.value;
+    const dateTo = dateToInput.value;
+    const lotValue = lotFilter.value;
+    const statusValue = statusFilter.value;
+
+    filteredSessions = allSessions.filter(session => {
+      // Search by plate number
+      if (searchTerm && !session.plate_number.toLowerCase().includes(searchTerm)) {
+        return false;
+      }
+
+      // Date range filter
+      if (!isDateInRange(session.entry_time, dateFrom, dateTo)) {
+        return false;
+      }
+
+      // Location filter
+      if (lotValue && session.lot_name !== lotValue) {
+        return false;
+      }
+
+      // Status filter
+      if (statusValue && session.status !== statusValue) {
+        return false;
+      }
+
+      return true;
+    });
+
+    currentPage = 1;
+    renderTable();
+    updatePagination();
+  }
+
+  function clearFilters() {
+    searchInput.value = '';
+    dateFromInput.value = '';
+    dateToInput.value = '';
+    lotFilter.value = '';
+    statusFilter.value = '';
+    
+    filteredSessions = [...allSessions];
+    currentPage = 1;
+    renderTable();
+    updatePagination();
+  }
+
+  // Sort Functions
+  function sortSessions(field) {
+    if (currentSort.field === field) {
+      currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+      currentSort.field = field;
+      currentSort.direction = 'asc';
+    }
+
+    filteredSessions.sort((a, b) => {
+      let aVal = a[field];
+      let bVal = b[field];
+
+      // Handle null values
+      if (aVal === null || aVal === undefined) aVal = '';
+      if (bVal === null || bVal === undefined) bVal = '';
+
+      // Handle numeric values
+      if (field === 'fee_usd') {
+        aVal = parseFloat(aVal) || 0;
+        bVal = parseFloat(bVal) || 0;
+      }
+
+      // Handle date/time values
+      if (field === 'entry_time' || field === 'exit_time') {
+        aVal = aVal ? new Date(aVal).getTime() : 0;
+        bVal = bVal ? new Date(bVal).getTime() : 0;
+      }
+
+      // String comparison
+      if (typeof aVal === 'string') {
+        aVal = aVal.toLowerCase();
+        bVal = bVal.toLowerCase();
+      }
+
+      if (currentSort.direction === 'asc') {
+        return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+      } else {
+        return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
+      }
+    });
+
+    updateSortIndicators();
+    renderTable();
+    updatePagination();
+  }
+
+  function updateSortIndicators() {
+    sortableHeaders.forEach(header => {
+      const indicator = header.querySelector('.sort-indicator');
+      const field = header.getAttribute('data-sort');
+      
+      if (field === currentSort.field) {
+        indicator.textContent = currentSort.direction === 'asc' ? ' ↑' : ' ↓';
+        header.classList.add('sort-active');
+      } else {
+        indicator.textContent = '';
+        header.classList.remove('sort-active');
+      }
+    });
+  }
+
+  // Render Functions
+  function renderTable() {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const pageSessions = filteredSessions.slice(startIndex, endIndex);
+
+    tableBody.innerHTML = '';
+
+    if (pageSessions.length === 0) {
+      tableBody.innerHTML = `
+        <tr>
+          <td colspan="8" class="no-results">No parking sessions found matching your filters.</td>
+        </tr>
+      `;
+      return;
+    }
+
+    pageSessions.forEach(session => {
+      const row = document.createElement('tr');
+      row.className = 'table-row';
+      
+      row.innerHTML = `
+        <td class="table-cell">${session.session_id}</td>
+        <td class="table-cell">${session.plate_number}</td>
+        <td class="table-cell">${session.lot_name}</td>
+        <td class="table-cell">${formatDateTime(session.entry_time)}</td>
+        <td class="table-cell">${session.exit_time ? formatDateTime(session.exit_time) : '—'}</td>
+        <td class="table-cell">${session.duration}</td>
+        <td class="table-cell">$${session.fee_usd.toFixed(2)}</td>
+        <td class="table-cell">
+          <span class="status-badge status-${session.status.toLowerCase()}">${session.status}</span>
+        </td>
+      `;
+      
+      tableBody.appendChild(row);
+    });
+
+    // Update results count
+    const totalResults = filteredSessions.length;
+    resultsCount.textContent = `Showing ${totalResults} result${totalResults !== 1 ? 's' : ''}`;
+  }
+
+  function updatePagination() {
+    const totalPages = Math.ceil(filteredSessions.length / itemsPerPage);
+    
+    pageInfo.textContent = `Page ${currentPage} of ${totalPages || 1}`;
+    
+    prevPageBtn.disabled = currentPage === 1;
+    nextPageBtn.disabled = currentPage >= totalPages || totalPages === 0;
+  }
+
+  // Event Listeners
+  searchInput.addEventListener('input', function() {
+    applyFilters();
+  });
+
+  searchInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      applyFilters();
+    }
+  });
+
+  applyFiltersBtn.addEventListener('click', applyFilters);
+  clearFiltersBtn.addEventListener('click', clearFilters);
+
+  prevPageBtn.addEventListener('click', function() {
+    if (currentPage > 1) {
+      currentPage--;
+      renderTable();
+      updatePagination();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  });
+
+  nextPageBtn.addEventListener('click', function() {
+    const totalPages = Math.ceil(filteredSessions.length / itemsPerPage);
+    if (currentPage < totalPages) {
+      currentPage++;
+      renderTable();
+      updatePagination();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  });
+
+  sortableHeaders.forEach(header => {
+    header.addEventListener('click', function() {
+      const field = this.getAttribute('data-sort');
+      sortSessions(field);
+    });
+  });
+
+  // Initialize
+  renderTable();
+  updatePagination();
+})();
+</script>
+
+{% endblock %}
