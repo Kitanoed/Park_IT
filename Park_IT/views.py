@@ -199,7 +199,13 @@ class UnifiedLoginView(View):
             return render(request, 'login.html', {'form': form})
 
         email = user_resp.data[0]['email']
-        user_role = user_resp.data[0].get('role', 'user')
+        # Normalize role: convert to lowercase, handle NULL/empty, default to 'user'
+        raw_role = user_resp.data[0].get('role') or 'user'
+        user_role = str(raw_role).strip().lower() if raw_role else 'user'
+        
+        # Ensure role is either 'admin' or 'user'
+        if user_role not in ['admin', 'user']:
+            user_role = 'user'
 
         try:
             auth_resp = supabase.auth.sign_in_with_password(
@@ -219,7 +225,7 @@ class UnifiedLoginView(View):
         # Store session data
         request.session['access_token'] = auth_resp.session.access_token
         request.session['user_id'] = auth_resp.user.id
-        request.session['role'] = user_role  # Store role in session for quick access
+        request.session['role'] = user_role  # Store normalized role in session
 
         messages.success(request, 'Login successful!')
         
@@ -333,7 +339,11 @@ class DashboardView(View):
                 return redirect('home')
 
             user_data = user_response.data[0]
-            role_name = user_data.get('role', 'user')
+            # Normalize role: convert to lowercase, handle NULL/empty, default to 'user'
+            raw_role = user_data.get('role') or 'user'
+            role_name = str(raw_role).strip().lower() if raw_role else 'user'
+            if role_name not in ['admin', 'user']:
+                role_name = 'user'
         except ValueError as e:
             # Supabase credentials not configured
             messages.error(request, 'Server configuration error. Please contact administrator.')
@@ -501,7 +511,11 @@ class UserDashboardView(View):
                 return redirect('home')
 
             user_data = user_response.data[0]
-            role_name = user_data.get('role', 'user')
+            # Normalize role: convert to lowercase, handle NULL/empty, default to 'user'
+            raw_role = user_data.get('role') or 'user'
+            role_name = str(raw_role).strip().lower() if raw_role else 'user'
+            if role_name not in ['admin', 'user']:
+                role_name = 'user'
 
             # Prevent admin from entering user dashboard
             if role_name == 'admin':
@@ -809,7 +823,11 @@ class ParkingSpacesView(View):
                 return redirect('home')
 
             user_data = user_response.data[0]
-            role_name = user_data.get('role', 'user')
+            # Normalize role: convert to lowercase, handle NULL/empty, default to 'user'
+            raw_role = user_data.get('role') or 'user'
+            role_name = str(raw_role).strip().lower() if raw_role else 'user'
+            if role_name not in ['admin', 'user']:
+                role_name = 'user'
         except ValueError:
             messages.error(request, 'Server configuration error. Please contact administrator.')
             return redirect('home')
@@ -865,7 +883,11 @@ class StudentParkingSpacesView(View):
                 return redirect('home')
 
             user_data = user_response.data[0]
-            role_name = user_data.get('role', 'user')
+            # Normalize role: convert to lowercase, handle NULL/empty, default to 'user'
+            raw_role = user_data.get('role') or 'user'
+            role_name = str(raw_role).strip().lower() if raw_role else 'user'
+            if role_name not in ['admin', 'user']:
+                role_name = 'user'
         except Exception as e:
             messages.error(request, f'Database error: {str(e)}')
             return redirect('home')
@@ -909,7 +931,11 @@ class ManageUsersView(View):
                 return redirect('home')
 
             user_data = user_response.data[0]
-            role_name = user_data.get('role', 'user')
+            # Normalize role: convert to lowercase, handle NULL/empty, default to 'user'
+            raw_role = user_data.get('role') or 'user'
+            role_name = str(raw_role).strip().lower() if raw_role else 'user'
+            if role_name not in ['admin', 'user']:
+                role_name = 'user'
         except ValueError as e:
             # Supabase credentials not configured
             messages.error(request, 'Server configuration error. Please contact administrator.')
@@ -1077,8 +1103,9 @@ class EditUserView(View):
             }
             return render(request, 'edit_user.html', context)
 
-        # Validate role - only "user" or "admin" allowed
-        if role_raw not in ['user', 'admin']:
+        # Normalize and validate role - only "user" or "admin" allowed
+        normalized_role = str(role_raw).strip().lower() if role_raw else 'user'
+        if normalized_role not in ['user', 'admin']:
             messages.error(request, 'Invalid role. Must be "user" or "admin".')
             context = {
                 'role': role_name,
@@ -1097,7 +1124,7 @@ class EditUserView(View):
                 'first_name': first_name,
                 'last_name': last_name,
                 'student_employee_id': username,
-                'role': role_raw,  # Direct role field
+                'role': normalized_role,  # Always save as lowercase
             }).eq('id', user_id).execute()
 
             messages.success(request, 'User updated successfully.')
@@ -1251,8 +1278,9 @@ class AddUserView(View):
             messages.error(request, 'All fields are required.')
             return self._render_form(request, current_user, role_name, roles, form_values)
 
-        # Validate role - only "user" or "admin" allowed
-        if role_raw not in ['user', 'admin']:
+        # Normalize and validate role - only "user" or "admin" allowed
+        normalized_role = str(role_raw).strip().lower() if role_raw else 'user'
+        if normalized_role not in ['user', 'admin']:
             messages.error(request, 'Invalid role. Must be "user" or "admin".')
             return self._render_form(request, current_user, role_name, roles, form_values)
 
@@ -1292,14 +1320,14 @@ class AddUserView(View):
                 messages.error(request, f'Failed to create auth user: {detail}')
                 return self._render_form(request, current_user, role_name, roles, form_values)
 
-            # Insert into users profile table with role field
+            # Insert into users profile table with role field (always lowercase)
             supabase.table('users').insert({
                 'id': auth_user.id,
                 'first_name': first_name,
                 'last_name': last_name,
                 'email': email,
                 'student_employee_id': username,
-                'role': role_raw,  # Direct role field
+                'role': normalized_role,  # Always save as lowercase
                 'status': 'active',
             }).execute()
 
@@ -1336,7 +1364,9 @@ def update_user_role(request, user_id):
         if not current_user_response.data:
             return JsonResponse({'error': 'User not found'}, status=404)
         
-        current_role = current_user_response.data[0].get('role', 'user')
+        # Normalize current user's role for comparison
+        raw_current_role = current_user_response.data[0].get('role', 'user')
+        current_role = str(raw_current_role).strip().lower() if raw_current_role else 'user'
         if current_role != 'admin':
             return JsonResponse({'error': 'Admin privileges required'}, status=403)
         
@@ -1349,6 +1379,7 @@ def update_user_role(request, user_id):
         else:
             data = request.POST
         
+        # Normalize new role to lowercase
         new_role = data.get('role', '').strip().lower()
         
         # Validate role

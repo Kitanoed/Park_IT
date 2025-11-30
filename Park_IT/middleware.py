@@ -40,7 +40,11 @@ class RoleBasedAccessControlMiddleware:
                     request.session.flush()
                     return redirect('login')
                 
-                user_role = user_response.data[0].get('role', 'user')
+                # Normalize role: convert to lowercase, handle NULL/empty, default to 'user'
+                raw_role = user_response.data[0].get('role', 'user')
+                user_role = str(raw_role).strip().lower() if raw_role else 'user'
+                if user_role not in ['admin', 'user']:
+                    user_role = 'user'
                 
                 # Only allow "admin" role to access /admin/* routes
                 if user_role != 'admin':
