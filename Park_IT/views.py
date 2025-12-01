@@ -4,6 +4,7 @@ from django.views import View
 from django.views.decorators.http import require_POST
 from django.utils import timezone
 from django.urls import reverse
+from django.http import JsonResponse
 from .forms import RegisterForm, LoginForm
 from utils import supabase
 import time
@@ -1468,6 +1469,13 @@ class AdminParkingHistoryView(View):
             messages.error(request, 'Access denied. Admins only.')
             return redirect('user_dashboard')
 
+        # Fetch parking lots for the filter dropdown
+        try:
+            lots_resp = supabase.table('parking_lot').select('name').order('name').execute()
+            parking_lots = [lot.get('name') for lot in (lots_resp.data or []) if lot.get('name')]
+        except Exception:
+            parking_lots = []
+
         context = {
             'role': role_name,
             'full_name': f"{user_data['first_name']} {user_data['last_name']}",
@@ -1475,5 +1483,201 @@ class AdminParkingHistoryView(View):
             'last_name': user_data['last_name'],
             'email': user_data['email'],
             'username': user_data['student_employee_id'],
+            'parking_lots': parking_lots,
         }
         return render(request, 'admin_parking_history.html', context)
+
+
+def calculate_duration(entry_time, exit_time):
+    """Calculate duration in 'Xh Ym' format"""
+    if not exit_time:
+        return '0h 0m'
+    
+    try:
+        entry = datetime.fromisoformat(entry_time.replace('Z', '+00:00'))
+        exit_dt = datetime.fromisoformat(exit_time.replace('Z', '+00:00'))
+        
+        if entry.tzinfo is None:
+            entry = entry.replace(tzinfo=dt_timezone.utc)
+        if exit_dt.tzinfo is None:
+            exit_dt = exit_dt.replace(tzinfo=dt_timezone.utc)
+        
+        delta = exit_dt - entry
+        total_seconds = int(delta.total_seconds())
+        
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        
+        return f'{hours}h {minutes}m'
+    except Exception:
+        return '0h 0m'
+
+
+def parking_history_api(request):
+    """
+    API Endpoint: GET /api/admin/parking/history/
+    
+    Returns paginated parking session data with filtering capabilities.
+    Admin-only endpoint.
+    
+    Query Parameters:
+    - search_plate (string): Filter by vehicle plate (partial match)
+    - date_from (date YYYY-MM-DD): Filter sessions with entry_time >= date_from
+    - date_to (date YYYY-MM-DD): Filter sessions with entry_time <= date_to
+    - lot_name (string): Filter by exact parking lot name
+    - status (string): Filter by 'Active' or 'Completed'
+    - page (int): Page number (default: 1)
+    - page_size (int): Items per page (default: 10, max: 100)
+    """
+    # Authentication check
+    if 'access_token' not in request.session:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    
+    try:
+        # Verify user is admin
+        user_id = request.session.get('user_id')
+        user_response = supabase.table('users').select('role').eq('id', user_id).execute()
+        
+        if not user_response.data:
+            return JsonResponse({'error': 'User not found'}, status=404)
+        
+        raw_role = user_response.data[0].get('role') or 'user'
+        role_name = str(raw_role).strip().lower() if raw_role else 'user'
+        if role_name not in ['admin', 'user']:
+            role_name = 'user'
+        
+        if role_name != 'admin':
+            return JsonResponse({'error': 'Admin privileges required'}, status=403)
+    except Exception as e:
+        return JsonResponse({'error': f'Authentication error: {str(e)}'}, status=500)
+    
+    # Get query parameters
+    search_plate = request.GET.get('search_plate', '').strip()
+    date_from = request.GET.get('date_from', '').strip()
+    date_to = request.GET.get('date_to', '').strip()
+    lot_name = request.GET.get('lot_name', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+    page = int(request.GET.get('page', 1))
+    page_size = min(int(request.GET.get('page_size', 10)), 100)
+    
+    try:
+        # Build base query for entries
+        entries_query = supabase.table('entries_exits').select(
+            'id, time, vehicle_id, action, lot_id'
+        ).eq('action', 'entry').order('time', desc=True)
+        
+        # Apply date filters
+        if date_from:
+            entries_query = entries_query.gte('time', f'{date_from}T00:00:00')
+        if date_to:
+            entries_query = entries_query.lte('time', f'{date_to}T23:59:59')
+        
+        # Get all entry records
+        entries_response = entries_query.execute()
+        entry_records = entries_response.data or []
+        
+        if not entry_records:
+            return JsonResponse({
+                'results': [],
+                'count': 0,
+                'page': page,
+                'page_size': page_size,
+                'total_pages': 0
+            })
+        
+        # Get vehicle IDs and lot IDs for filtering
+        vehicle_ids = [e['vehicle_id'] for e in entry_records if e.get('vehicle_id')]
+        lot_ids = [e['lot_id'] for e in entry_records if e.get('lot_id')]
+        
+        # Fetch vehicles with plate filter
+        vehicles_query = supabase.table('vehicle').select('id, plate')
+        if vehicle_ids:
+            vehicles_query = vehicles_query.in_('id', vehicle_ids)
+        if search_plate:
+            # Use ILIKE for case-insensitive partial match
+            vehicles_query = vehicles_query.ilike('plate', f'%{search_plate}%')
+        
+        vehicles_response = vehicles_query.execute()
+        vehicles_map = {v['id']: v.get('plate', '') for v in (vehicles_response.data or [])}
+        
+        # Filter by lot name if provided
+        lots_query = supabase.table('parking_lot').select('id, name')
+        if lot_ids:
+            lots_query = lots_query.in_('id', lot_ids)
+        if lot_name:
+            lots_query = lots_query.eq('name', lot_name)
+        
+        lots_response = lots_query.execute()
+        lots_map = {l['id']: l.get('name', '') for l in (lots_response.data or [])}
+        valid_lot_ids = set(lots_map.keys())
+        
+        # Build sessions by matching entries with exits
+        sessions = []
+        
+        for entry in entry_records:
+            vehicle_id = entry.get('vehicle_id')
+            lot_id = entry.get('lot_id')
+            entry_time = entry.get('time')
+            
+            # Skip if vehicle or lot doesn't match filters
+            if vehicle_id not in vehicles_map:
+                continue
+            if lot_id not in valid_lot_ids:
+                continue
+            
+            plate_number = vehicles_map[vehicle_id]
+            lot_name_value = lots_map.get(lot_id, '')
+            
+            # Find corresponding exit record
+            exit_time = None
+            try:
+                exit_query = supabase.table('entries_exits').select('time').eq(
+                    'vehicle_id', vehicle_id
+                ).eq('action', 'exit').gte('time', entry_time).order('time', desc=True).limit(1)
+                
+                exit_response = exit_query.execute()
+                if exit_response.data:
+                    exit_time = exit_response.data[0].get('time')
+            except Exception:
+                pass
+            
+            # Determine status
+            session_status = 'Active' if exit_time is None else 'Completed'
+            
+            # Apply status filter
+            if status_filter and session_status != status_filter:
+                continue
+            
+            # Calculate duration
+            duration = calculate_duration(entry_time, exit_time)
+            
+            sessions.append({
+                'session_id': entry.get('id'),
+                'plate_number': plate_number,
+                'lot_name': lot_name_value,
+                'entry_time': entry_time,
+                'exit_time': exit_time,
+                'duration': duration,
+                'status': session_status
+            })
+        
+        # Sort sessions by entry_time (most recent first)
+        sessions.sort(key=lambda x: x['entry_time'] or '', reverse=True)
+        
+        # Pagination
+        total_count = len(sessions)
+        total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 0
+        start_index = (page - 1) * page_size
+        end_index = start_index + page_size
+        paginated_sessions = sessions[start_index:end_index]
+        
+        return JsonResponse({
+            'results': paginated_sessions,
+            'count': total_count,
+            'page': page,
+            'page_size': page_size,
+            'total_pages': total_pages
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': f'Database error: {str(e)}'}, status=500)

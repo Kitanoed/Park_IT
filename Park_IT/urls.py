@@ -7,6 +7,7 @@ from .views import (
     SignInView, DashboardView, ParkingSpacesView, ManageUsersView, UserDashboardView,
     EditUserView, deactivate_user, activate_user, AddUserView, update_parking_slot_status,
     StudentParkingSpacesView, UnifiedLoginView, update_user_role, AdminParkingHistoryView,
+    parking_history_api,
 )
 
 urlpatterns = [
@@ -37,7 +38,8 @@ urlpatterns = [
     path("manage-users/<str:user_id>/activate/", activate_user, name="activate_user"),
     # Admin parking history (admin only)
     path("admin/parking-history/", AdminParkingHistoryView.as_view(), name="admin_parking_history"),
-    # Admin API endpoint for role management
+    # Admin API endpoints
+    path("api/admin/parking/history/", parking_history_api, name="parking_history_api"),
     path("api/admin/users/<str:user_id>/role/", update_user_role, name="update_user_role"),
 ]
 
