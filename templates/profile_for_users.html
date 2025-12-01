@@ -185,8 +185,8 @@
   }
 
   .parking-grid{
-    display:grid;
-    grid-template-columns: repeat(auto-fill,minmax(150px,1fr));
+    display:grid
+ grid-template-columns: repeat(auto-fill,minmax(150px,1fr));
     gap:12px;
   }
 
@@ -198,13 +198,11 @@
     display:flex;
     flex-direction:column;
     gap:6px;
-    /* Changed to default cursor so it doesn't look clickable */
     cursor: default;
     transition:all 0.2s;
     text-align:left;
   }
 
-  /* Optional: Keep hover effect for visual depth, or remove if desired */
   .parking-slot:hover{
     transform:translateY(-2px);
     box-shadow:0 8px 18px rgba(15,23,42,0.08);
@@ -284,20 +282,17 @@
         </div>
       </div>
 
-     <nav class="nav">
-  <a href="{% url 'user_dashboard' %}">
-    <span class="ico"></span>
-    <span>Dashboard</span>
-  </a>
-  <a class="active" href="{% url 'stud_parking_spaces' %}">
-    <span class="ico"></span>
-    <span>Parking Spaces</span>
-  </a>
-  <a href="{% url 'profile_for_users' %}">
-    <span class="ico"></span>
-    <span>Profile</span>
-  </a>
-</nav>
+      <nav class="nav">
+        <a href="{% url 'user_dashboard' %}">
+          <span class="ico">▦</span><span>Dashboard</span>
+        </a>
+        <a class="active" href="{% url 'stud_parking_spaces' %}">
+          <span class="ico">🅿</span><span>Parking Spaces</span>
+        </a>
+        <a href="{% url 'user_profile' %}">
+          <span class="ico">👤</span><span>Profile</span>
+        </a>
+      </nav>
 
       <div class="spacer"></div>
 
@@ -405,7 +400,5 @@
       }
     });
   });
-
-  // Removed all Slot Editing JavaScript
 </script>
 {% endblock %}

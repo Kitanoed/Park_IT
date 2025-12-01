@@ -298,14 +298,20 @@
         </div>
       </div>
 
-      <nav class="nav">
-        <a class="active" href="{% url 'user_dashboard' %}">
-          <span class="ico">▦</span><span>Dashboard</span>
-        </a>
-        <a href="{% url 'stud_parking_spaces' %}">
-          <span class="ico">🅿</span><span>Parking Spaces</span>
-        </a>
-      </nav>
+ <nav class="nav">
+  <a class="active" href="{% url 'user_dashboard' %}">
+    <span class="ico"></span>
+    <span>Dashboard</span>
+  </a>
+  <a href="{% url 'stud_parking_spaces' %}">
+    <span class="ico"></span>
+    <span>Parking Spaces</span>
+  </a>
+  <a href="{% url 'profile_for_users' %}">
+    <span class="ico"></span>
+    <span>Profile</span>
+  </a>
+</nav>
 
       <div class="spacer"></div>
 
