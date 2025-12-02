@@ -7,7 +7,8 @@ from .views import (
     SignInView, DashboardView, ParkingSpacesView, ManageUsersView, UserDashboardView,
     EditUserView, deactivate_user, activate_user, AddUserView, update_parking_slot_status,
     UserParkingSpacesView, UnifiedLoginView, update_user_role, AdminParkingHistoryView,
-    parking_history_api, ProfileForUsersView, reset_user_password,
+    parking_history_api, ProfileForUsersView, reset_user_password, ChangePasswordView,
+    AdminResetPasswordView,
 )
 
 urlpatterns = [
@@ -30,7 +31,7 @@ urlpatterns = [
     path('profile/', ProfileForUsersView.as_view(), name='profile_for_users'),
     path('profile/', ProfileForUsersView.as_view(), name='user_profile'),  # Alias for template compatibility
     path('profile/update/', ProfileForUsersView.as_view(), name='update_profile'),  # Alias for profile update form
-    path('profile/change-password/', ProfileForUsersView.as_view(), name='change_password'),  # Alias for password change form
+    path('profile/change-password/', ChangePasswordView.as_view(), name='change_password'),
     # Parking spaces
     path('parking-spaces/', ParkingSpacesView.as_view(), name='parking_spaces'),
     path('user/parking-spaces/', UserParkingSpacesView.as_view(), name='user_parking_spaces'),
@@ -42,7 +43,8 @@ urlpatterns = [
     path("manage-users/<str:user_id>/edit/", EditUserView.as_view(), name="edit_user"),
     path("manage-users/<str:user_id>/deactivate/", deactivate_user, name="deactivate_user"),
     path("manage-users/<str:user_id>/activate/", activate_user, name="activate_user"),
-    path("manage-users/reset-password/", reset_user_password, name="reset_user_password"),
+    path("manage-users/<str:user_id>/reset-password/", AdminResetPasswordView.as_view(), name="admin_reset_password"),
+    path("manage-users/reset-password/", reset_user_password, name="reset_user_password"),  # Legacy endpoint
     # Admin parking history (admin only)
     path("admin/parking-history/", AdminParkingHistoryView.as_view(), name="admin_parking_history"),
     # Admin API endpoints

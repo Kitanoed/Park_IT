@@ -5,7 +5,7 @@ from django.views.decorators.http import require_POST
 from django.utils import timezone
 from django.urls import reverse
 from django.http import JsonResponse
-from .forms import RegisterForm, LoginForm
+from .forms import RegisterForm, LoginForm, ChangePasswordForm, AdminPasswordResetForm
 from utils import supabase
 import time
 from datetime import datetime, timedelta, timezone as dt_timezone
@@ -952,11 +952,45 @@ class ManageUsersView(View):
             messages.error(request, 'Access denied. Admins only.')
             return redirect('user_dashboard')
 
+        # Get search query parameter
+        search_query = request.GET.get('q', '').strip()
+        
         try:
-            users_response = supabase.table('users').select(
-                'id, first_name, last_name, student_employee_id, status, created_at, role'
-            ).order('created_at', desc=True).execute()
-            raw_users = users_response.data or []
+            # Build query with optional search filter
+            users_query = supabase.table('users').select(
+                'id, first_name, last_name, student_employee_id, status, created_at, role, email'
+            )
+            
+            # Apply search filter if provided
+            if search_query:
+                # Supabase doesn't support OR queries directly, so we'll filter in Python
+                # But we can still order by created_at
+                users_query = users_query.order('created_at', desc=True)
+                users_response = users_query.execute()
+                raw_users = users_response.data or []
+                
+                # Filter in Python for case-insensitive search across multiple fields
+                search_lower = search_query.lower()
+                filtered_users = []
+                for user in raw_users:
+                    first_name = (user.get('first_name') or '').lower()
+                    last_name = (user.get('last_name') or '').lower()
+                    username = (user.get('student_employee_id') or '').lower()
+                    email = (user.get('email') or '').lower()
+                    full_name = f"{first_name} {last_name}".strip()
+                    
+                    if (search_lower in first_name or 
+                        search_lower in last_name or 
+                        search_lower in username or 
+                        search_lower in email or
+                        search_lower in full_name):
+                        filtered_users.append(user)
+                
+                raw_users = filtered_users
+            else:
+                users_query = users_query.order('created_at', desc=True)
+                users_response = users_query.execute()
+                raw_users = users_response.data or []
         except Exception as e:
             messages.error(request, f'Unable to load users: {str(e)}')
             raw_users = []
@@ -998,6 +1032,7 @@ class ManageUsersView(View):
             'last_name': user_data['last_name'],
             'email': user_data['email'],
             'username': user_data['student_employee_id'],
+            'search_query': search_query,  # Pass search query to template
         }
         return render(request, 'manage_users.html', context)
 
@@ -1727,71 +1762,26 @@ class ProfileForUsersView(View):
         return render(request, 'profile_for_users.html', context)
 
     def post(self, request):
-        # Handle profile update or password change
+        # Handle profile update only (password change moved to separate view)
         if 'access_token' not in request.session:
             messages.error(request, 'Please log in first.')
             return redirect('login')
 
         try:
             user_id = request.session.get('user_id')
+            full_name = request.POST.get('full_name', '').strip()
             
-            # Check if this is a password change request
-            if 'current_password' in request.POST:
-                # Handle password change
-                current_password = request.POST.get('current_password', '').strip()
-                new_password = request.POST.get('new_password', '').strip()
-                confirm_password = request.POST.get('confirm_password', '').strip()
+            if full_name:
+                parts = full_name.split(' ', 1)
+                first_name = parts[0] if parts else ''
+                last_name = parts[1] if len(parts) > 1 else ''
                 
-                if not new_password or not confirm_password:
-                    messages.error(request, 'All password fields are required.')
-                    return redirect('profile_for_users')
+                supabase.table('users').update({
+                    'first_name': first_name,
+                    'last_name': last_name,
+                }).eq('id', user_id).execute()
                 
-                if new_password != confirm_password:
-                    messages.error(request, 'New passwords do not match.')
-                    return redirect('profile_for_users')
-                
-                # Get user email for password update
-                user_response = supabase.table('users').select('email').eq('id', user_id).execute()
-                if not user_response.data:
-                    messages.error(request, 'User not found.')
-                    return redirect('profile_for_users')
-                
-                email = user_response.data[0]['email']
-                
-                # Update password via Supabase auth
-                try:
-                    # First verify current password by attempting to sign in
-                    try:
-                        supabase.auth.sign_in_with_password({"email": email, "password": current_password})
-                    except Exception:
-                        messages.error(request, 'Current password is incorrect.')
-                        return redirect('profile_for_users')
-                    
-                    # Update password using admin API
-                    try:
-                        supabase.auth.admin.update_user_by_id(user_id, {"password": new_password})
-                        messages.success(request, 'Password updated successfully.')
-                    except AttributeError:
-                        messages.error(request, 'Password update is not available. Please contact system administrator.')
-                    except Exception as e:
-                        messages.error(request, f'Failed to update password: {str(e)}')
-                except Exception as e:
-                    messages.error(request, f'Error updating password: {str(e)}')
-            else:
-                # Handle profile update
-                full_name = request.POST.get('full_name', '').strip()
-                
-                if full_name:
-                    parts = full_name.split(' ', 1)
-                    first_name = parts[0] if parts else ''
-                    last_name = parts[1] if len(parts) > 1 else ''
-                    
-                    supabase.table('users').update({
-                        'first_name': first_name,
-                        'last_name': last_name,
-                    }).eq('id', user_id).execute()
-                    
-                    messages.success(request, 'Profile updated successfully.')
+                messages.success(request, 'Profile updated successfully.')
             
         except Exception as e:
             messages.error(request, f'Error: {str(e)}')
@@ -1799,9 +1789,338 @@ class ProfileForUsersView(View):
         return redirect('profile_for_users')
 
 
+class ChangePasswordView(View):
+    """View for users to change their own password"""
+    def get(self, request):
+        if 'access_token' not in request.session:
+            messages.error(request, 'Please log in first.')
+            return redirect('login')
+
+        try:
+            user_id = request.session.get('user_id')
+            user_response = supabase.table('users').select(
+                'first_name, last_name, email, student_employee_id, role'
+            ).eq('id', user_id).execute()
+
+            if not user_response.data:
+                messages.error(request, 'User not found.')
+                return redirect('home')
+
+            user_data = user_response.data[0]
+            raw_role = user_data.get('role') or 'user'
+            role_name = str(raw_role).strip().lower() if raw_role else 'user'
+            if role_name not in ['admin', 'user']:
+                role_name = 'user'
+
+        except Exception as e:
+            messages.error(request, f'Error loading profile: {str(e)}')
+            return redirect('home')
+
+        form = ChangePasswordForm()
+        context = {
+            'form': form,
+            'role': role_name,
+            'full_name': f"{user_data['first_name']} {user_data['last_name']}",
+            'first_name': user_data['first_name'],
+            'last_name': user_data['last_name'],
+            'email': user_data['email'],
+            'username': user_data['student_employee_id'],
+        }
+        return render(request, 'change_password.html', context)
+
+    def post(self, request):
+        if 'access_token' not in request.session:
+            messages.error(request, 'Please log in first.')
+            return redirect('login')
+
+        form = ChangePasswordForm(request.POST)
+        
+        try:
+            user_id = request.session.get('user_id')
+            user_response = supabase.table('users').select(
+                'first_name, last_name, email, student_employee_id, role'
+            ).eq('id', user_id).execute()
+
+            if not user_response.data:
+                messages.error(request, 'User not found.')
+                return redirect('home')
+
+            user_data = user_response.data[0]
+            raw_role = user_data.get('role') or 'user'
+            role_name = str(raw_role).strip().lower() if raw_role else 'user'
+            if role_name not in ['admin', 'user']:
+                role_name = 'user'
+
+            if form.is_valid():
+                current_password = form.cleaned_data['current_password']
+                new_password = form.cleaned_data['new_password']
+                email = user_data['email']
+                
+                # Verify current password and update using Supabase
+                try:
+                    from utils.supabase_client import get_client
+                    from supabase import create_client
+                    import os
+                    
+                    # Get Supabase URL and anon key for user operations
+                    supabase_url = os.environ.get("SUPABASE_URL")
+                    supabase_anon_key = os.environ.get("SUPABASE_ANON_KEY") or os.environ.get("SUPABASE_KEY")
+                    
+                    if not supabase_url or not supabase_anon_key:
+                        messages.error(request, 'Server configuration error. Please contact administrator.')
+                        return redirect('profile_for_users')
+                    
+                    # Create a client for password verification
+                    temp_client = create_client(supabase_url, supabase_anon_key)
+                    
+                    # Verify current password by signing in
+                    auth_resp = temp_client.auth.sign_in_with_password({
+                        "email": email, 
+                        "password": current_password
+                    })
+                    
+                    if not auth_resp.session:
+                        messages.error(request, 'Current password is incorrect.')
+                        context = {
+                            'form': form,
+                            'role': role_name,
+                            'full_name': f"{user_data['first_name']} {user_data['last_name']}",
+                            'first_name': user_data['first_name'],
+                            'last_name': user_data['last_name'],
+                            'email': user_data['email'],
+                            'username': user_data['student_employee_id'],
+                        }
+                        return render(request, 'change_password.html', context)
+                    
+                    # Set the session on the client
+                    temp_client.auth.set_session(
+                        access_token=auth_resp.session.access_token,
+                        refresh_token=auth_resp.session.refresh_token
+                    )
+                    
+                    # Update password using the authenticated session
+                    update_resp = temp_client.auth.update_user({
+                        "password": new_password
+                    })
+                    
+                    if update_resp.user:
+                        messages.success(request, 'Password updated successfully. Please log in again with your new password.')
+                        # Clear session and redirect to login
+                        request.session.flush()
+                        return redirect('login')
+                    else:
+                        messages.error(request, 'Failed to update password. Please try again.')
+                        
+                except Exception as e:
+                    error_msg = str(e)
+                    if 'Invalid login credentials' in error_msg or 'Email not confirmed' in error_msg or 'Invalid' in error_msg:
+                        messages.error(request, 'Current password is incorrect.')
+                    else:
+                        messages.error(request, f'Failed to update password: {error_msg}')
+                    
+                    context = {
+                        'form': form,
+                        'role': role_name,
+                        'full_name': f"{user_data['first_name']} {user_data['last_name']}",
+                        'first_name': user_data['first_name'],
+                        'last_name': user_data['last_name'],
+                        'email': user_data['email'],
+                        'username': user_data['student_employee_id'],
+                    }
+                    return render(request, 'change_password.html', context)
+            else:
+                # Form has errors, re-render with errors
+                context = {
+                    'form': form,
+                    'role': role_name,
+                    'full_name': f"{user_data['first_name']} {user_data['last_name']}",
+                    'first_name': user_data['first_name'],
+                    'last_name': user_data['last_name'],
+                    'email': user_data['email'],
+                    'username': user_data['student_employee_id'],
+                }
+                return render(request, 'change_password.html', context)
+                
+        except Exception as e:
+            messages.error(request, f'Error: {str(e)}')
+            return redirect('profile_for_users')
+
+
+class AdminResetPasswordView(View):
+    """Admin view to reset any user's password"""
+    def get(self, request, user_id):
+        if 'access_token' not in request.session:
+            messages.error(request, 'Please log in first.')
+            return redirect('login')
+
+        try:
+            # Verify current user is admin
+            current_user_id = request.session.get('user_id')
+            current_user_response = supabase.table('users').select('first_name, last_name, email, student_employee_id, role').eq('id', current_user_id).execute()
+            
+            if not current_user_response.data:
+                messages.error(request, 'User not found.')
+                return redirect('manage_users')
+            
+            current_user = current_user_response.data[0]
+            raw_current_role = current_user.get('role', 'user')
+            current_role = str(raw_current_role).strip().lower() if raw_current_role else 'user'
+            if current_role != 'admin':
+                messages.error(request, 'Access denied. Admins only.')
+                return redirect('user_dashboard')
+            
+            # Get target user
+            target_user_response = supabase.table('users').select(
+                'id, first_name, last_name, student_employee_id, email'
+            ).eq('id', user_id).execute()
+            
+            if not target_user_response.data:
+                messages.error(request, 'Target user not found.')
+                return redirect('manage_users')
+            
+            target_user = target_user_response.data[0]
+            form = AdminPasswordResetForm()
+            
+            context = {
+                'form': form,
+                'target_user': target_user,
+                'role': current_role,
+                'full_name': f"{current_user['first_name']} {current_user['last_name']}",
+                'first_name': current_user['first_name'],
+                'last_name': current_user['last_name'],
+                'email': current_user['email'],
+                'username': current_user['student_employee_id'],
+            }
+            return render(request, 'admin_reset_password.html', context)
+            
+        except Exception as e:
+            messages.error(request, f'Error: {str(e)}')
+            return redirect('manage_users')
+
+    def post(self, request, user_id):
+        if 'access_token' not in request.session:
+            messages.error(request, 'Please log in first.')
+            return redirect('login')
+
+        try:
+            # Verify current user is admin
+            current_user_id = request.session.get('user_id')
+            current_user_response = supabase.table('users').select('first_name, last_name, email, student_employee_id, role').eq('id', current_user_id).execute()
+            
+            if not current_user_response.data:
+                messages.error(request, 'User not found.')
+                return redirect('manage_users')
+            
+            current_user = current_user_response.data[0]
+            raw_current_role = current_user.get('role', 'user')
+            current_role = str(raw_current_role).strip().lower() if raw_current_role else 'user'
+            if current_role != 'admin':
+                messages.error(request, 'Access denied. Admins only.')
+                return redirect('user_dashboard')
+            
+            # Get target user
+            target_user_response = supabase.table('users').select(
+                'id, first_name, last_name, student_employee_id, email'
+            ).eq('id', user_id).execute()
+            
+            if not target_user_response.data:
+                messages.error(request, 'Target user not found.')
+                return redirect('manage_users')
+            
+            target_user = target_user_response.data[0]
+            form = AdminPasswordResetForm(request.POST)
+            
+            if form.is_valid():
+                new_password = form.cleaned_data['new_password']
+                
+                # Update password using Supabase admin API
+                # This requires service role key to work
+                try:
+                    from supabase import create_client
+                    import os
+                    
+                    # Get Supabase URL and SERVICE ROLE KEY (required for admin operations)
+                    supabase_url = os.environ.get("SUPABASE_URL")
+                    supabase_service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+                    
+                    if not supabase_url:
+                        messages.error(request, 'Server configuration error: SUPABASE_URL not set.')
+                        context = {
+                            'form': form,
+                            'target_user': target_user,
+                            'role': current_role,
+                            'full_name': f"{current_user['first_name']} {current_user['last_name']}",
+                            'first_name': current_user['first_name'],
+                            'last_name': current_user['last_name'],
+                            'email': current_user['email'],
+                            'username': current_user['student_employee_id'],
+                        }
+                        return render(request, 'admin_reset_password.html', context)
+                    
+                    if not supabase_service_key:
+                        messages.error(request, 'Admin password reset requires SUPABASE_SERVICE_ROLE_KEY to be set in environment variables. Anon key cannot perform admin operations.')
+                        context = {
+                            'form': form,
+                            'target_user': target_user,
+                            'role': current_role,
+                            'full_name': f"{current_user['first_name']} {current_user['last_name']}",
+                            'first_name': current_user['first_name'],
+                            'last_name': current_user['last_name'],
+                            'email': current_user['email'],
+                            'username': current_user['student_employee_id'],
+                        }
+                        return render(request, 'admin_reset_password.html', context)
+                    
+                    # Create admin client with service role key
+                    admin_client = create_client(supabase_url, supabase_service_key)
+                    
+                    # Use admin API to update user password
+                    try:
+                        update_resp = admin_client.auth.admin.update_user_by_id(
+                            user_id,
+                            {"password": new_password}
+                        )
+                        
+                        if update_resp.user:
+                            messages.success(request, f'Password reset successfully for {target_user.get("first_name", "")} {target_user.get("last_name", "")}.')
+                            return redirect('manage_users')
+                        else:
+                            messages.error(request, 'Password reset failed. User not found or update failed.')
+                    except AttributeError as attr_err:
+                        # Admin API not available
+                        messages.error(request, f'Admin API not available: {str(attr_err)}. Please check your Supabase Python client version.')
+                    except Exception as admin_error:
+                        error_msg = str(admin_error)
+                        if 'User not allowed' in error_msg or 'permission' in error_msg.lower() or 'not authorized' in error_msg.lower():
+                            messages.error(request, 'Permission denied. The service role key may be incorrect or the user may not exist in Supabase Auth.')
+                        else:
+                            messages.error(request, f'Failed to reset password: {error_msg}')
+                            
+                except Exception as e:
+                    error_msg = str(e)
+                    messages.error(request, f'Error resetting password: {error_msg}')
+            
+            # Form has errors, re-render
+            context = {
+                'form': form,
+                'target_user': target_user,
+                'role': current_role,
+                'full_name': f"{current_user['first_name']} {current_user['last_name']}",
+                'first_name': current_user['first_name'],
+                'last_name': current_user['last_name'],
+                'email': current_user['email'],
+                'username': current_user['student_employee_id'],
+            }
+            return render(request, 'admin_reset_password.html', context)
+            
+        except Exception as e:
+            messages.error(request, f'Error: {str(e)}')
+            return redirect('manage_users')
+
+
 @require_POST
 def reset_user_password(request):
-    """Admin-only endpoint to reset a user's password"""
+    """Legacy admin-only endpoint to reset a user's password (kept for backward compatibility)"""
     if 'access_token' not in request.session:
         messages.error(request, 'Please log in first.')
         return redirect('login')

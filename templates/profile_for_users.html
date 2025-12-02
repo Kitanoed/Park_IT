@@ -337,24 +337,12 @@
         <!-- Right: change password -->
         <div class="panel">
           <h3 class="panel-title">Change Password</h3>
-          <form method="post" action="{% url 'change_password' %}">
-            {% csrf_token %}
-            <div class="form-field">
-              <label class="field-label">Current Password</label>
-              <input type="password" class="field-input" name="current_password" required>
-            </div>
-            <div class="form-field">
-              <label class="field-label">New Password</label>
-              <input type="password" class="field-input" name="new_password" required>
-            </div>
-            <div class="form-field">
-              <label class="field-label">Confirm New Password</label>
-              <input type="password" class="field-input" name="confirm_password" required>
-            </div>
-            <div class="btn-row">
-              <button type="submit" class="btn-primary">Update password</button>
-            </div>
-          </form>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">
+            Update your account password to keep your account secure.
+          </p>
+          <a href="{% url 'change_password' %}" class="btn-primary" style="text-decoration:none;display:inline-block;">
+            Change Password
+          </a>
         </div>
       </div>
     </div>

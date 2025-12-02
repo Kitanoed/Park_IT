@@ -472,7 +472,23 @@
       </div>
 
       <div class="search-box">
-        <input type="text" placeholder="Search by name or username" />
+        <form method="get" action="{% url 'manage_users' %}" style="display:flex;gap:8px;">
+          <input 
+            type="text" 
+            name="q" 
+            placeholder="Search by name, username, or email" 
+            value="{{ search_query|default:'' }}"
+            style="flex:1;"
+          />
+          <button type="submit" class="btn-add" style="height:36px;padding:0 18px;">
+            Search
+          </button>
+          {% if search_query %}
+          <a href="{% url 'manage_users' %}" class="btn-add" style="height:36px;padding:0 18px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;background:#6b7280;">
+            Clear
+          </a>
+          {% endif %}
+        </form>
       </div>
 
       <table>
@@ -507,7 +523,7 @@
                   <button type="submit">[D]</button>
                 </form>
               {% endif %}
-              <a href="#" class="reset-btn" data-user-id="{{ user.id }}">[R]</a>
+              <a href="{% url 'admin_reset_password' user.id %}" class="reset-btn">[R]</a>
             </td>
           </tr>
           {% endfor %}
@@ -551,32 +567,6 @@
   </div>
 </div>
 
-<!-- Reset Password Modal -->
-<div class="modal-overlay" id="resetModal">
-  <div class="account-modal">
-    <div class="modal-header">
-      <h3 class="modal-title">Reset Password</h3>
-      <button class="close-btn" id="closeResetModal">&times;</button>
-    </div>
-    <div class="modal-body">
-      <form id="resetPasswordForm" method="post" action="{% url 'reset_user_password' %}">
-        {% csrf_token %}
-        <input type="hidden" name="user_id" id="resetUserId">
-        <div class="form-field">
-          <label class="field-label">New Password</label>
-          <input type="password" class="field-input" name="new_password" required>
-        </div>
-        <div class="form-field">
-          <label class="field-label">Confirm Password</label>
-          <input type="password" class="field-input" name="confirm_password" required>
-        </div>
-        <div class="modal-footer">
-          <button type="submit" class="logout-btn-modal">Reset</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
 
 <script>
   // Account Modal elements
@@ -601,36 +591,6 @@
     }
   });
 
-  // Reset Password Modal elements
-  const resetModal = document.getElementById('resetModal');
-  const resetBtns = document.querySelectorAll('.reset-btn');
-  const closeResetModal = document.getElementById('closeResetModal');
-  const resetUserIdInput = document.getElementById('resetUserId');
-  const resetPasswordForm = document.getElementById('resetPasswordForm');
-
-  // Open Reset Password modal and set user ID
-  resetBtns.forEach(btn => {
-    btn.addEventListener('click', function(e) {
-      e.preventDefault();
-      const userId = this.dataset.userId;
-      resetUserIdInput.value = userId;
-      resetModal.classList.add('show');
-    });
-  });
-
-  // Close Reset Password modal
-  closeResetModal.addEventListener('click', () => {
-    resetModal.classList.remove('show');
-    resetPasswordForm.reset();
-  });
-
-  // Close Reset Password modal when clicking outside
-  resetModal.addEventListener('click', function(e) {
-    if (e.target === resetModal) {
-      resetModal.classList.remove('show');
-      resetPasswordForm.reset();
-    }
-  });
 </script>
 
 {% endblock %}
