@@ -198,16 +198,9 @@
     display:flex;
     flex-direction:column;
     gap:6px;
-    /* Changed to default cursor so it doesn't look clickable */
     cursor: default;
     transition:all 0.2s;
     text-align:left;
-  }
-
-  /* Optional: Keep hover effect for visual depth, or remove if desired */
-  .parking-slot:hover{
-    transform:translateY(-2px);
-    box-shadow:0 8px 18px rgba(15,23,42,0.08);
   }
 
   .parking-slot .slot-number{
@@ -264,6 +257,94 @@
     .app{grid-template-columns: 1fr;}
     .parking-grid{grid-template-columns: repeat(2, 1fr);}
     .left-section{flex-wrap: wrap;}
+  }
+
+  /* Notification Styles */
+  .notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .notification {
+    background: #fff;
+    border-radius: 8px;
+    padding: 16px 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    min-width: 300px;
+    max-width: 400px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: slideIn 0.3s ease-out;
+    border-left: 4px solid;
+  }
+
+  .notification.success {
+    border-left-color: #2fbf4a;
+  }
+
+  .notification.error {
+    border-left-color: #e53935;
+  }
+
+  .notification-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .notification.success .notification-icon {
+    background: #d1fae5;
+    color: #047857;
+  }
+
+  .notification.error .notification-icon {
+    background: #fee2e2;
+    color: #b91c1c;
+  }
+
+  .notification-message {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideOut {
+    from {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+  }
+
+  .notification.hiding {
+    animation: slideOut 0.3s ease-out forwards;
   }
 </style>
 
@@ -386,7 +467,9 @@
   </div>
 </div>
 
+
 <script>
+  // Account Modal
   const profileTrigger = document.getElementById('profileTrigger');
   const accountModal = document.getElementById('accountModal');
   const closeAccountModal = document.getElementById('closeAccountModal');
@@ -397,6 +480,7 @@
     if (e.target === accountModal) accountModal.classList.remove('show');
   });
 
+  // Filter Buttons
   document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const href = btn.dataset.href;
@@ -406,6 +490,6 @@
     });
   });
 
-  // Removed all Slot Editing JavaScript
+  // Slots are read-only for users - no click handlers needed
 </script>
 {% endblock %}

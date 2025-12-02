@@ -270,6 +270,94 @@
     .parking-grid{grid-template-columns: repeat(2, 1fr);}
     .left-section{flex-wrap: wrap;}
   }
+
+  /* Notification Styles */
+  .notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .notification {
+    background: #fff;
+    border-radius: 8px;
+    padding: 16px 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    min-width: 300px;
+    max-width: 400px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: slideIn 0.3s ease-out;
+    border-left: 4px solid;
+  }
+
+  .notification.success {
+    border-left-color: #2fbf4a;
+  }
+
+  .notification.error {
+    border-left-color: #e53935;
+  }
+
+  .notification-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .notification.success .notification-icon {
+    background: #d1fae5;
+    color: #047857;
+  }
+
+  .notification.error .notification-icon {
+    background: #fee2e2;
+    color: #b91c1c;
+  }
+
+  .notification-message {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideOut {
+    from {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+  }
+
+  .notification.hiding {
+    animation: slideOut 0.3s ease-out forwards;
+  }
 </style>
 
 <div class="dashboard-wrap">
@@ -353,6 +441,7 @@
                     data-slot-id="{{ slot.id }}"
                     data-slot-number="{{ slot.slot_number|default:'—' }}"
                     data-slot-status="{{ slot.status }}"
+                    data-license-plate="{{ slot.license_plate|default:'' }}"
                     data-update-url="{% url 'update_slot_status' slot.id %}">
               <span class="slot-number">Slot {{ slot.slot_number|default:'—' }}</span>
               <span class="slot-status">{{ slot.status_label }}</span>
@@ -401,11 +490,11 @@
   </div>
 </div>
 
-<!-- manage slot modal -->
+<!-- Edit Slot Modal (Admin) -->
 <div class="modal-overlay" id="slotModal">
   <div class="account-modal">
     <div class="modal-header">
-      <h3 class="modal-title" id="slotModalTitle">Manage Slot</h3>
+      <h3 class="modal-title" id="slotModalTitle">Slot 19</h3>
       <button class="close-btn" id="closeSlotModal">&times;</button>
     </div>
     <div class="modal-body">
@@ -413,7 +502,7 @@
         <label class="field-label">Plate Number</label>
         <div style="display: flex; gap: 8px;">
           <input type="text" class="field-input" id="slotPlateNumber" placeholder="PlateNumber" style="flex: 1;">
-          <button type="button" style="width: 40px; height: 40px; border: 1px solid var(--border); background: #fff; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--muted); transition: all 0.2s;" onmouseover="this.style.borderColor='var(--brand-red)'; this.style.color='var(--brand-red)';" onmouseout="this.style.borderColor='var(--border)'; this.style.color='var(--muted)';">
+          <button type="button" id="refreshPlateBtn" style="width: 40px; height: 40px; border: 1px solid var(--border); background: #fff; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--muted); transition: all 0.2s;" onmouseover="this.style.borderColor='var(--brand-red)'; this.style.color='var(--brand-red)';" onmouseout="this.style.borderColor='var(--border)'; this.style.color='var(--muted)';">
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
@@ -422,15 +511,15 @@
       </div>
       <div class="form-field">
         <label class="field-label">Date</label>
-        <input type="text" class="field-input" id="slotDate" placeholder="mm/dd/yyyy">
+        <input type="text" class="field-input" id="slotDate" placeholder="mm/dd/yyyy" readonly style="background: #f3f4f6;">
       </div>
       <div class="form-field">
         <label class="field-label">Time</label>
-        <input type="text" class="field-input" id="slotTime" placeholder="--:--:--">
+        <input type="text" class="field-input" id="slotTime" placeholder="----" readonly style="background: #f3f4f6;">
       </div>
       <div class="form-field">
         <label class="field-label">Slot Status</label>
-        <select class="field-input" id="slotStatusSelect">
+        <select class="field-input" id="slotStatusSelect" style="appearance: auto; background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\'><polyline points=\'6 9 12 15 18 9\'></polyline></svg>'); background-repeat: no-repeat; background-position: right 8px center; background-size: 16px; padding-right: 32px;">
           <option value="available">Available</option>
           <option value="occupied">Occupied</option>
           <option value="reserved">Reserved</option>
@@ -438,11 +527,21 @@
         </select>
       </div>
     </div>
-    <div class="modal-footer">
+    <div class="modal-footer" style="display: flex; gap: 10px; justify-content: space-between;">
+      <div style="display: flex; gap: 10px;">
+        <button class="btn-save" id="checkInBtn" style="background: linear-gradient(135deg, #2fbf4a 0%, #28c840 100%);">Check-In</button>
+        <button class="btn-save" id="checkOutBtn" style="background: linear-gradient(135deg, #e53935 0%, #b91c1c 100%);">Check-Out</button>
+      </div>
       <button class="btn-save" id="saveChanges">Save Changes</button>
     </div>
   </div>
 </div>
+
+<!-- Notification Container -->
+<div class="notification-container" id="notificationContainer"></div>
+
+<!-- Hidden CSRF Token for API calls -->
+<div style="display:none;">{% csrf_token %}</div>
 
 <form id="slotStatusForm" method="post" style="display:none;">
   {% csrf_token %}
@@ -451,6 +550,58 @@
 </form>
 
 <script>
+  // Get CSRF token from cookies
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  function getCSRFToken() {
+    const token = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (token) return token.value;
+    return getCookie('csrftoken');
+  }
+
+  // Notification System
+  function showNotification(message, type = 'success') {
+    const container = document.getElementById('notificationContainer');
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    
+    const icon = document.createElement('div');
+    icon.className = 'notification-icon';
+    icon.textContent = type === 'success' ? '✓' : '✕';
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'notification-message';
+    messageDiv.textContent = message;
+    
+    notification.appendChild(icon);
+    notification.appendChild(messageDiv);
+    container.appendChild(notification);
+    
+    // Auto-remove after 4 seconds
+    setTimeout(() => {
+      notification.classList.add('hiding');
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 300);
+    }, 4000);
+  }
+
+  // Account Modal
   const profileTrigger = document.getElementById('profileTrigger');
   const accountModal = document.getElementById('accountModal');
   const closeAccountModal = document.getElementById('closeAccountModal');
@@ -460,6 +611,7 @@
     if (e.target === accountModal) accountModal.classList.remove('show');
   });
 
+  // Filter Buttons
   document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const href = btn.dataset.href;
@@ -469,6 +621,7 @@
     });
   });
 
+  // Slot Modals
   const slotModal = document.getElementById('slotModal');
   const closeSlotModal = document.getElementById('closeSlotModal');
   const slotStatusSelect = document.getElementById('slotStatusSelect');
@@ -476,17 +629,134 @@
   const slotForm = document.getElementById('slotStatusForm');
   const slotStatusInput = document.getElementById('slotStatusInput');
   const slotLotInput = document.getElementById('slotLotInput');
+  const slotPlateInput = document.getElementById('slotPlateNumber');
   let activeSlot = null;
 
+  // Format date helper
+  function formatDate(dateString) {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${month}/${day}/${year}`;
+    } catch (e) {
+      return '';
+    }
+  }
+
+  // Format time helper
+  function formatTime(dateString) {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      return `${hours}:${minutes}:${seconds}`;
+    } catch (e) {
+      return '';
+    }
+  }
+
+  // Get current date/time
+  function getCurrentDateTime() {
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const year = now.getFullYear();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    return {
+      date: `${month}/${day}/${year}`,
+      time: `${hours}:${minutes}:${seconds}`
+    };
+  }
+
+  // Slot Click Handler - Always show edit modal for admin
   document.querySelectorAll('.parking-slot').forEach(slot => {
     slot.addEventListener('click', () => {
       activeSlot = slot;
-      slotModalTitle.textContent = `Slot ${slot.dataset.slotNumber}`;
-      slotStatusSelect.value = slot.dataset.slotStatus;
+      const slotStatus = slot.dataset.slotStatus;
+      const slotId = slot.dataset.slotId;
+      const slotNumber = slot.dataset.slotNumber;
+      
+      // Always show edit modal
+      slotModalTitle.textContent = `Slot ${slotNumber}`;
+      slotStatusSelect.value = slotStatus;
+      slotPlateInput.value = slot.dataset.licensePlate || '';
+      
+      // Show/hide check-in/check-out buttons based on status
+      const checkInBtn = document.getElementById('checkInBtn');
+      const checkOutBtn = document.getElementById('checkOutBtn');
+      if (slotStatus === 'available') {
+        checkInBtn.style.display = 'block';
+        checkOutBtn.style.display = 'none';
+        // Set current date/time for check-in
+        const current = getCurrentDateTime();
+        document.getElementById('slotDate').value = current.date;
+        document.getElementById('slotTime').value = current.time;
+      } else if (slotStatus === 'occupied') {
+        checkInBtn.style.display = 'none';
+        checkOutBtn.style.display = 'block';
+        // Fetch slot details for date/time
+        fetch(`/api/parking-slots/${slotId}/details/`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              if (data.slot.license_plate) {
+                slot.dataset.licensePlate = data.slot.license_plate;
+                slotPlateInput.value = data.slot.license_plate;
+              }
+              if (data.slot.check_in_time) {
+                document.getElementById('slotDate').value = formatDate(data.slot.check_in_time);
+                document.getElementById('slotTime').value = formatTime(data.slot.check_in_time);
+                return;
+              }
+            }
+            const current = getCurrentDateTime();
+            document.getElementById('slotDate').value = current.date;
+            document.getElementById('slotTime').value = current.time;
+          })
+          .catch(error => {
+            const current = getCurrentDateTime();
+            document.getElementById('slotDate').value = current.date;
+            document.getElementById('slotTime').value = current.time;
+          });
+      } else {
+        checkInBtn.style.display = 'none';
+        checkOutBtn.style.display = 'none';
+        // Fetch slot details for date/time
+        fetch(`/api/parking-slots/${slotId}/details/`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              if (data.slot.license_plate) {
+                slot.dataset.licensePlate = data.slot.license_plate;
+                slotPlateInput.value = data.slot.license_plate;
+              }
+              if (data.slot.check_in_time) {
+                document.getElementById('slotDate').value = formatDate(data.slot.check_in_time);
+                document.getElementById('slotTime').value = formatTime(data.slot.check_in_time);
+                return;
+              }
+            }
+            document.getElementById('slotDate').value = '';
+            document.getElementById('slotTime').value = '';
+          })
+          .catch(error => {
+            document.getElementById('slotDate').value = '';
+            document.getElementById('slotTime').value = '';
+          });
+      }
+      
       slotModal.classList.add('show');
     });
   });
 
+  // Close Modal
   closeSlotModal.addEventListener('click', () => {
     slotModal.classList.remove('show');
     activeSlot = null;
@@ -499,11 +769,141 @@
     }
   });
 
+  // Check-In Handler
+  document.getElementById('checkInBtn').addEventListener('click', () => {
+    if (!activeSlot) return;
+    const slotId = activeSlot.dataset.slotId;
+    const plateNumber = document.getElementById('slotPlateNumber').value.trim();
+    
+    if (!plateNumber) {
+      showNotification('Please enter a license plate number', 'error');
+      return;
+    }
+    
+    fetch(`/api/parking-slots/${slotId}/check-in/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCSRFToken()
+      },
+      body: JSON.stringify({ license_plate: plateNumber })
+    })
+    .then(response => {
+      if (!response.ok) {
+        return response.json().then(data => {
+          throw new Error(data.error || `HTTP ${response.status}`);
+        });
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data.success) {
+        let message = data.message || 'Vehicle checked in successfully';
+        if (data.warning) {
+          message += ` (Warning: ${data.warning})`;
+          console.warn('Check-in warning:', data.warning);
+        }
+        if (data.vehicle_warning) {
+          console.warn('Vehicle warning:', data.vehicle_warning);
+        }
+        showNotification(message, data.warning ? 'error' : 'success');
+        slotModal.classList.remove('show');
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } else {
+        showNotification(data.error || 'Check-in failed', 'error');
+      }
+    })
+    .catch(error => {
+      console.error('Check-in error:', error);
+      showNotification(error.message || 'Error during check-in', 'error');
+    });
+  });
+
+  // Check-Out Handler
+  document.getElementById('checkOutBtn').addEventListener('click', () => {
+    if (!activeSlot) return;
+    const slotId = activeSlot.dataset.slotId;
+    const plateNumber = slotPlateInput.value.trim();
+    
+    fetch(`/api/parking-slots/${slotId}/check-out/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCSRFToken()
+      },
+      body: JSON.stringify({ license_plate: plateNumber || null })
+    })
+    .then(response => {
+      if (!response.ok) {
+        return response.json().then(data => {
+          throw new Error(data.error || `HTTP ${response.status}`);
+        });
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data.success) {
+        let message = data.message || 'Vehicle checked out successfully';
+        if (data.warning) {
+          message += ` (Warning: ${data.warning})`;
+          console.warn('Check-out warning:', data.warning);
+        }
+        if (data.vehicle_warning) {
+          console.warn('Vehicle warning:', data.vehicle_warning);
+        }
+        showNotification(message, data.warning ? 'error' : 'success');
+        slotModal.classList.remove('show');
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } else {
+        showNotification(data.error || 'Check-out failed', 'error');
+      }
+    })
+    .catch(error => {
+      console.error('Check-out error:', error);
+      showNotification(error.message || 'Error during check-out', 'error');
+    });
+  });
+
+  // Save Changes Handler (Edit Modal) - Only for status changes
   document.getElementById('saveChanges').addEventListener('click', () => {
     if (!activeSlot) return;
     slotForm.action = activeSlot.dataset.updateUrl;
     slotStatusInput.value = slotStatusSelect.value;
     slotForm.submit();
+  });
+
+  // Refresh Plate Button (Edit Modal)
+  document.getElementById('refreshPlateBtn').addEventListener('click', () => {
+    if (!activeSlot) return;
+    const slotId = activeSlot.dataset.slotId;
+    
+    fetch(`/api/parking-slots/${slotId}/details/`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          if (data.slot.license_plate) {
+            activeSlot.dataset.licensePlate = data.slot.license_plate;
+            slotPlateInput.value = data.slot.license_plate;
+          }
+          if (data.slot.check_in_time) {
+            document.getElementById('slotDate').value = formatDate(data.slot.check_in_time);
+            document.getElementById('slotTime').value = formatTime(data.slot.check_in_time);
+          } else {
+            document.getElementById('slotDate').value = '';
+            document.getElementById('slotTime').value = '';
+          }
+          showNotification('Slot information refreshed', 'success');
+        } else {
+          showNotification('Failed to refresh slot information', 'error');
+        }
+      })
+      .catch(error => {
+        showNotification('Error refreshing slot information', 'error');
+      });
   });
 </script>
 {% endblock %}

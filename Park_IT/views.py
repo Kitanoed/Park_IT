@@ -19,8 +19,20 @@ def fetch_parking_data():
         lots = []
 
     try:
-        slots_resp = supabase.table('parking_slot').select('id, lot_id, slot_number, status').execute()
+        # Try to include extended columns; fall back to base columns if they don't exist yet
+        try:
+            slots_resp = supabase.table('parking_slot').select(
+                'id, lot_id, slot_number, status, license_plate, check_in_time'
+            ).execute()
+        except Exception:
+            slots_resp = supabase.table('parking_slot').select('id, lot_id, slot_number, status').execute()
         slots = slots_resp.data or []
+        # Add default values for new columns if they don't exist in the response
+        for slot in slots:
+            if 'license_plate' not in slot:
+                slot['license_plate'] = None
+            if 'check_in_time' not in slot:
+                slot['check_in_time'] = None
     except Exception:
         slots = []
 
@@ -33,6 +45,11 @@ def build_lot_display(lots, slots, selected_lot_id=None):
         lot_id = slot.get('lot_id')
         if lot_id is None:
             continue
+        # Ensure lot_id is stored as int for consistent lookup
+        try:
+            lot_id = int(lot_id)
+        except (TypeError, ValueError):
+            pass
         slots_by_lot[lot_id].append(slot)
 
     lot_options = []
@@ -46,6 +63,11 @@ def build_lot_display(lots, slots, selected_lot_id=None):
 
     for lot in lots:
         lot_id = lot.get('id')
+        # Ensure lot_id is int for consistent comparison
+        try:
+            lot_id = int(lot_id) if lot_id is not None else None
+        except (TypeError, ValueError):
+            pass
         entry = {
             'id': lot_id,
             'code': lot.get('code') or lot.get('name') or f'Lot {lot_id}',
@@ -82,6 +104,8 @@ def build_lot_display(lots, slots, selected_lot_id=None):
             'status': status,
             'status_label': status_label,
             'status_class': status_class,
+            'license_plate': slot.get('license_plate'),
+            'check_in_time': slot.get('check_in_time'),
         })
 
     total_slots = len(current_slots_raw)
@@ -416,9 +440,9 @@ class DashboardView(View):
 
         for row in entry_rows:
             action = (row.get('action') or '').lower()
-            if action.startswith('enter'):
+            if action == 'entry' or action.startswith('enter'):
                 total_entries += 1
-            elif action.startswith('exit'):
+            elif action == 'exit' or action.startswith('exit'):
                 total_exits += 1
 
         for row in entry_rows[:6]:
@@ -1677,12 +1701,17 @@ def parking_history_api(request):
             except Exception:
                 pass
             
-            # Determine status
-            session_status = 'Active' if exit_time is None else 'Completed'
+            # Determine status - "Incomplete" for sessions without exit, "Completed" for sessions with exit
+            session_status = 'Incomplete' if exit_time is None else 'Completed'
             
-            # Apply status filter
-            if status_filter and session_status != status_filter:
-                continue
+            # Apply status filter (handle both old "Active" and new "Incomplete" for backward compatibility)
+            if status_filter:
+                if status_filter == 'Active':
+                    # Map old "Active" filter to "Incomplete"
+                    if session_status != 'Incomplete':
+                        continue
+                elif session_status != status_filter:
+                    continue
             
             # Calculate duration
             duration = calculate_duration(entry_time, exit_time)
@@ -2170,3 +2199,470 @@ def reset_user_password(request):
         messages.error(request, f'Error: {str(e)}')
     
     return redirect('manage_users')
+
+
+@require_POST
+def handle_check_in(request, slot_id):
+    """
+    API Endpoint: Vehicle Check-In
+    Updates the slot's status to 'occupied', stores license plate, and sets check_in_time.
+    """
+    if 'access_token' not in request.session:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    
+    try:
+        # Get license plate from request
+        if request.content_type and 'application/json' in request.content_type:
+            import json
+            data = json.loads(request.body)
+            license_plate = data.get('license_plate', '').strip()
+        else:
+            license_plate = request.POST.get('license_plate', '').strip()
+        
+        if not license_plate:
+            return JsonResponse({'error': 'License plate is required'}, status=400)
+        # Normalize formatting for consistency
+        license_plate = license_plate.strip().upper()
+        
+        # Get current slot status and lot_id in one query
+        slot_resp = supabase.table('parking_slot').select('id, status, lot_id').eq('id', slot_id).execute()
+        
+        if not slot_resp.data or len(slot_resp.data) == 0:
+            return JsonResponse({'error': 'Slot not found'}, status=404)
+        
+        current_slot = slot_resp.data[0]
+        current_status = (current_slot.get('status') or 'available').lower()
+        lot_id = current_slot.get('lot_id')
+        
+        # Validation: Check if slot is already occupied
+        if current_status == 'occupied':
+            return JsonResponse({'error': 'Slot is already occupied'}, status=400)
+        
+        # Validate lot_id exists
+        if not lot_id:
+            return JsonResponse({'error': 'Slot does not have an associated parking lot'}, status=400)
+        
+        if not license_plate:
+            return JsonResponse({'error': 'No license plate recorded for this slot. Please enter the plate number before checking out.'}, status=400)
+        
+        # Get lot code from parking_lot table for zone field
+        lot_code = None
+        try:
+            lot_resp = supabase.table('parking_lot').select('code').eq('id', lot_id).execute()
+            if lot_resp.data and len(lot_resp.data) > 0:
+                lot_code = lot_resp.data[0].get('code')
+                print(f"Retrieved lot code: {lot_code} for lot_id: {lot_id}")
+        except Exception as e:
+            print(f"Warning: Failed to retrieve lot code: {str(e)}")
+            # Continue without zone if we can't get the code
+        
+        # Update slot with check-in information
+        from datetime import datetime
+        check_in_time = datetime.now(dt_timezone.utc).isoformat()
+        
+        # First update status (this column definitely exists)
+        update_data = {
+            'status': 'occupied',
+        }
+        supabase.table('parking_slot').update(update_data).eq('id', slot_id).execute()
+        
+        # Try to update license_plate and check_in_time if columns exist
+        try:
+            update_data_extended = {
+                'license_plate': license_plate,
+                'check_in_time': check_in_time
+            }
+            supabase.table('parking_slot').update(update_data_extended).eq('id', slot_id).execute()
+        except Exception:
+            # Columns don't exist yet - that's okay, status was updated
+            pass
+        
+        # Create or get vehicle record - always fetch by plate first, then insert if needed
+        vehicle_id = None
+        vehicle_error = None
+        
+        try:
+            # ALWAYS try to find existing vehicle by plate first (case-insensitive search)
+            # Try exact match first
+            vehicle_resp = supabase.table('vehicle').select('id, plate').eq('plate', license_plate).execute()
+            
+            # If not found, try case-insensitive search using ilike
+            if not vehicle_resp.data or len(vehicle_resp.data) == 0:
+                vehicle_resp = supabase.table('vehicle').select('id, plate').ilike('plate', license_plate).execute()
+            
+            if vehicle_resp.data and len(vehicle_resp.data) > 0:
+                vehicle_id = vehicle_resp.data[0]['id']
+                actual_plate = vehicle_resp.data[0].get('plate', license_plate)
+                print(f"Found existing vehicle with id: {vehicle_id} for plate: {actual_plate} (searched for: {license_plate})")
+            else:
+                # Vehicle doesn't exist, try to create it with normalized plate
+                print(f"Vehicle with plate '{license_plate}' not found, creating new vehicle...")
+                try:
+                    vehicle_insert = supabase.table('vehicle').insert({'plate': license_plate}).execute()
+                    if vehicle_insert.data and len(vehicle_insert.data) > 0:
+                        vehicle_id = vehicle_insert.data[0]['id']
+                        print(f"Created new vehicle with id: {vehicle_id} for plate: {license_plate}")
+                    else:
+                        # Insert succeeded but no data returned, fetch it
+                        vehicle_resp_after_insert = supabase.table('vehicle').select('id').eq('plate', license_plate).execute()
+                        if vehicle_resp_after_insert.data and len(vehicle_resp_after_insert.data) > 0:
+                            vehicle_id = vehicle_resp_after_insert.data[0]['id']
+                            print(f"Retrieved vehicle id: {vehicle_id} after insert")
+                        else:
+                            vehicle_error = "Vehicle insert succeeded but vehicle not found after insert"
+                            print(f"Error: {vehicle_error}")
+                except Exception as insert_error:
+                    # If insert fails for ANY reason (duplicate key, constraint violation, etc.), fetch by plate
+                    error_str = str(insert_error)
+                    error_dict = {}
+                    error_code = ''
+                    error_message = error_str
+                    
+                    # Parse error - could be dict or string
+                    if hasattr(insert_error, 'args') and insert_error.args:
+                        if isinstance(insert_error.args[0], dict):
+                            error_dict = insert_error.args[0]
+                            error_code = error_dict.get('code', '')
+                            error_message = error_dict.get('message', error_str)
+                        elif isinstance(insert_error.args[0], str):
+                            error_message = insert_error.args[0]
+                    
+                    print(f"Vehicle insert failed (code: {error_code}, message: {error_message}), fetching existing vehicle by plate...")
+                    
+                    # ALWAYS try to fetch by plate after insert error - vehicle might already exist
+                    # Try multiple search methods to be sure
+                    vehicle_found = False
+                    for search_plate in [license_plate, license_plate.strip()]:
+                        try:
+                            vehicle_resp_retry = supabase.table('vehicle').select('id, plate').eq('plate', search_plate).execute()
+                            if not vehicle_resp_retry.data or len(vehicle_resp_retry.data) == 0:
+                                vehicle_resp_retry = supabase.table('vehicle').select('id, plate').ilike('plate', search_plate).execute()
+                            
+                            if vehicle_resp_retry.data and len(vehicle_resp_retry.data) > 0:
+                                vehicle_id = vehicle_resp_retry.data[0]['id']
+                                actual_plate = vehicle_resp_retry.data[0].get('plate', search_plate)
+                                print(f"Successfully retrieved existing vehicle with id: {vehicle_id} for plate: {actual_plate} (searched: {search_plate})")
+                                vehicle_found = True
+                                break
+                        except Exception as fetch_error:
+                            print(f"Fetch attempt failed for '{search_plate}': {str(fetch_error)}")
+                            continue
+                    
+                    if not vehicle_found:
+                        # Vehicle truly doesn't exist and insert failed
+                        vehicle_error = f"Failed to create vehicle and vehicle not found after multiple search attempts. Error: {error_message}"
+                        print(f"Error: {vehicle_error}")
+        except Exception as e:
+            vehicle_error = str(e)
+            print(f"Error creating/finding vehicle: {vehicle_error}")
+            import traceback
+            print(f"Traceback: {traceback.format_exc()}")
+        
+        # Create entry record in entries_exits (parking history)
+        history_error = None
+        entry_created = False
+        if vehicle_id and lot_id:
+            try:
+                # Ensure lot_id and vehicle_id are the correct type (int/str as needed by Supabase)
+                entry_data = {
+                    'time': check_in_time,
+                    'vehicle_id': vehicle_id,
+                    'action': 'entry',
+                    'lot_id': lot_id
+                }
+                # Include zone (lot code) if we retrieved it
+                if lot_code:
+                    entry_data['zone'] = lot_code
+                
+                entry_result = supabase.table('entries_exits').insert(entry_data).execute()
+                
+                # Verify the entry was created
+                if entry_result.data and len(entry_result.data) > 0:
+                    entry_created = True
+                    print(f"Successfully created parking history entry: {entry_result.data[0]}")
+                else:
+                    history_error = "Entry record created but no data returned"
+                    print(f"Warning: {history_error}")
+            except Exception as e:
+                history_error = str(e)
+                error_str = str(e)
+                error_dict = {}
+                error_code = ''
+                
+                # Parse error - check if it's a duplicate key error on the id column
+                if hasattr(e, 'args') and e.args:
+                    if isinstance(e.args[0], dict):
+                        error_dict = e.args[0]
+                        error_code = error_dict.get('code', '')
+                        error_message = error_dict.get('message', error_str)
+                    else:
+                        error_message = error_str
+                else:
+                    error_message = error_str
+                
+                # Check if it's a sequence/duplicate key issue on the id column
+                is_sequence_error = (
+                    error_code == '23505' and 
+                    ('entries_exits_pkey' in error_message or 'id' in error_message.lower())
+                )
+                
+                if is_sequence_error:
+                    print(f"Sequence error detected on entries_exits table. Error: {error_message}")
+                    print("NOTE: You need to run the SQL script 'fix_entries_exits_sequence.sql' in Supabase to fix this.")
+                    history_error = f"Database sequence issue: {error_message}. Please run fix_entries_exits_sequence.sql in Supabase SQL Editor."
+                else:
+                    import traceback
+                    print(f"Error creating parking history entry: {history_error}")
+                    print(f"Traceback: {traceback.format_exc()}")
+                # Still continue - slot update was successful
+        else:
+            missing = []
+            if not vehicle_id:
+                missing.append('vehicle_id')
+            if not lot_id:
+                missing.append('lot_id')
+            history_error = f"Missing required data: {', '.join(missing)}"
+            print(f"Warning: Cannot create parking history entry - {history_error}")
+            print(f"Debug - vehicle_id: {vehicle_id}, lot_id: {lot_id}")
+        
+        # Return success response (slot update succeeded even if history creation had issues)
+        response_data = {
+            'success': True,
+            'message': 'Vehicle checked in successfully',
+            'slot_id': slot_id,
+            'license_plate': license_plate,
+            'check_in_time': check_in_time,
+            'history_created': entry_created,
+            'vehicle_id': vehicle_id,
+            'lot_id': lot_id
+        }
+        
+        # Include warnings if history creation had issues
+        if history_error:
+            response_data['warning'] = f"Parking history may not have been updated: {history_error}"
+        if vehicle_error:
+            response_data['vehicle_warning'] = f"Vehicle record issue: {vehicle_error}"
+        
+        return JsonResponse(response_data)
+        
+    except Exception as e:
+        return JsonResponse({'error': f'Check-in failed: {str(e)}'}, status=500)
+
+
+@require_POST
+def handle_check_out(request, slot_id):
+    """
+    API Endpoint: Vehicle Check-Out
+    Updates the slot's status to 'available' and clears license_plate and check_in_time.
+    """
+    if 'access_token' not in request.session:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    
+    try:
+        provided_plate = ''
+        try:
+            if request.content_type and 'application/json' in request.content_type:
+                import json
+                body = json.loads(request.body)
+                provided_plate = (body.get('license_plate') or '').strip().upper()
+            else:
+                provided_plate = (request.POST.get('license_plate') or '').strip().upper()
+        except Exception:
+            provided_plate = ''
+        
+        # Get current slot information
+        slot_resp = supabase.table('parking_slot').select('id, status, license_plate, slot_number, lot_id').eq('id', slot_id).execute()
+        
+        if not slot_resp.data or len(slot_resp.data) == 0:
+            return JsonResponse({'error': 'Slot not found'}, status=404)
+        
+        current_slot = slot_resp.data[0]
+        current_status = (current_slot.get('status') or 'available').lower()
+        license_plate = (provided_plate or current_slot.get('license_plate') or '').strip().upper()
+        slot_number = current_slot.get('slot_number', '')
+        lot_id = current_slot.get('lot_id')
+        
+        # Validation: Check if slot is actually occupied
+        if current_status != 'occupied':
+            return JsonResponse({'error': 'Slot is not currently occupied'}, status=400)
+        
+        # Validate lot_id exists
+        if not lot_id:
+            return JsonResponse({'error': 'Slot does not have an associated parking lot'}, status=400)
+        
+        # Get lot code from parking_lot table for zone field
+        lot_code = None
+        try:
+            lot_resp = supabase.table('parking_lot').select('code').eq('id', lot_id).execute()
+            if lot_resp.data and len(lot_resp.data) > 0:
+                lot_code = lot_resp.data[0].get('code')
+                print(f"Retrieved lot code: {lot_code} for lot_id: {lot_id}")
+        except Exception as e:
+            print(f"Warning: Failed to retrieve lot code: {str(e)}")
+            # Continue without zone if we can't get the code
+        
+        # Get vehicle_id for exit record
+        vehicle_id = None
+        vehicle_error = None
+        if license_plate:
+            try:
+                vehicle_resp = supabase.table('vehicle').select('id').eq('plate', license_plate).execute()
+                if vehicle_resp.data and len(vehicle_resp.data) > 0:
+                    vehicle_id = vehicle_resp.data[0]['id']
+                    print(f"Found vehicle with id: {vehicle_id} for plate: {license_plate}")
+                else:
+                    # Vehicle doesn't exist - this shouldn't happen on check-out, but handle it gracefully
+                    vehicle_error = f"Vehicle with plate {license_plate} not found in database"
+                    print(f"Warning: {vehicle_error}")
+            except Exception as e:
+                vehicle_error = str(e)
+                print(f"Error finding vehicle: {vehicle_error}")
+                import traceback
+                print(f"Traceback: {traceback.format_exc()}")
+        
+        # Update slot - clear check-out information
+        from datetime import datetime
+        check_out_time = datetime.now(dt_timezone.utc).isoformat()
+        
+        # First update status (this column definitely exists)
+        update_data = {
+            'status': 'available',
+        }
+        supabase.table('parking_slot').update(update_data).eq('id', slot_id).execute()
+        
+        # Try to clear license_plate and check_in_time if columns exist
+        try:
+            update_data_extended = {
+                'license_plate': None,
+                'check_in_time': None
+            }
+            supabase.table('parking_slot').update(update_data_extended).eq('id', slot_id).execute()
+        except Exception:
+            # Columns don't exist yet - that's okay, status was updated
+            pass
+        
+        # Create exit record in entries_exits (parking history)
+        history_error = None
+        exit_created = False
+        if vehicle_id and lot_id:
+            try:
+                # Ensure lot_id and vehicle_id are the correct type (int/str as needed by Supabase)
+                exit_data = {
+                    'time': check_out_time,
+                    'vehicle_id': vehicle_id,
+                    'action': 'exit',
+                    'lot_id': lot_id
+                }
+                # Include zone (lot code) if we retrieved it
+                if lot_code:
+                    exit_data['zone'] = lot_code
+                
+                exit_result = supabase.table('entries_exits').insert(exit_data).execute()
+                
+                # Verify the exit was created
+                if exit_result.data and len(exit_result.data) > 0:
+                    exit_created = True
+                    print(f"Successfully created parking history exit: {exit_result.data[0]}")
+                else:
+                    history_error = "Exit record created but no data returned"
+                    print(f"Warning: {history_error}")
+            except Exception as e:
+                history_error = str(e)
+                error_str = str(e)
+                error_dict = {}
+                error_code = ''
+                
+                # Parse error - check if it's a duplicate key error on the id column
+                if hasattr(e, 'args') and e.args:
+                    if isinstance(e.args[0], dict):
+                        error_dict = e.args[0]
+                        error_code = error_dict.get('code', '')
+                        error_message = error_dict.get('message', error_str)
+                    else:
+                        error_message = error_str
+                else:
+                    error_message = error_str
+                
+                # Check if it's a sequence/duplicate key issue on the id column
+                is_sequence_error = (
+                    error_code == '23505' and 
+                    ('entries_exits_pkey' in error_message or 'id' in error_message.lower())
+                )
+                
+                if is_sequence_error:
+                    print(f"Sequence error detected on entries_exits table. Error: {error_message}")
+                    print("NOTE: You need to run the SQL script 'fix_entries_exits_sequence.sql' in Supabase to fix this.")
+                    history_error = f"Database sequence issue: {error_message}. Please run fix_entries_exits_sequence.sql in Supabase SQL Editor."
+                else:
+                    import traceback
+                    print(f"Error creating parking history exit: {history_error}")
+                    print(f"Traceback: {traceback.format_exc()}")
+                # Still continue - slot update was successful
+        else:
+            missing = []
+            if not vehicle_id:
+                missing.append('vehicle_id')
+            if not lot_id:
+                missing.append('lot_id')
+            history_error = f"Missing required data: {', '.join(missing)}"
+            print(f"Warning: Cannot create parking history exit - {history_error}")
+            print(f"Debug - vehicle_id: {vehicle_id}, lot_id: {lot_id}")
+        
+        # Return success response (slot update succeeded even if history creation had issues)
+        response_data = {
+            'success': True,
+            'message': 'Vehicle checked out successfully',
+            'slot_id': slot_id,
+            'slot_number': slot_number,
+            'license_plate': license_plate,
+            'history_created': exit_created,
+            'vehicle_id': vehicle_id,
+            'lot_id': lot_id
+        }
+        
+        # Include warnings if history creation had issues
+        if history_error:
+            response_data['warning'] = f"Parking history may not have been updated: {history_error}"
+        if vehicle_error:
+            response_data['vehicle_warning'] = f"Vehicle record issue: {vehicle_error}"
+        
+        return JsonResponse(response_data)
+        
+    except Exception as e:
+        return JsonResponse({'error': f'Check-out failed: {str(e)}'}, status=500)
+
+
+def get_slot_details(request, slot_id):
+    """
+    API Endpoint: Get slot details including license plate and check-in time
+    """
+    if 'access_token' not in request.session:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    
+    try:
+        # Select base columns - include license_plate/check_in_time when available
+        try:
+            slot_resp = supabase.table('parking_slot').select(
+                'id, lot_id, slot_number, status, license_plate, check_in_time'
+            ).eq('id', slot_id).execute()
+        except Exception:
+            slot_resp = supabase.table('parking_slot').select('id, lot_id, slot_number, status').eq('id', slot_id).execute()
+        
+        if not slot_resp.data:
+            return JsonResponse({'error': 'Slot not found'}, status=404)
+        
+        slot = slot_resp.data[0]
+        # Add default values for columns that might not exist
+        return JsonResponse({
+            'success': True,
+            'slot': {
+                'id': slot.get('id'),
+                'slot_number': slot.get('slot_number'),
+                'status': slot.get('status'),
+                'license_plate': slot.get('license_plate', None),
+                'check_in_time': slot.get('check_in_time', None),
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': f'Failed to get slot details: {str(e)}'}, status=500)

@@ -8,7 +8,7 @@ from .views import (
     EditUserView, deactivate_user, activate_user, AddUserView, update_parking_slot_status,
     UserParkingSpacesView, UnifiedLoginView, update_user_role, AdminParkingHistoryView,
     parking_history_api, ProfileForUsersView, reset_user_password, ChangePasswordView,
-    AdminResetPasswordView,
+    AdminResetPasswordView, handle_check_in, handle_check_out, get_slot_details,
 )
 
 urlpatterns = [
@@ -50,6 +50,10 @@ urlpatterns = [
     # Admin API endpoints
     path("api/admin/parking/history/", parking_history_api, name="parking_history_api"),
     path("api/admin/users/<str:user_id>/role/", update_user_role, name="update_user_role"),
+    # Parking slot check-in/check-out endpoints
+    path("api/parking-slots/<int:slot_id>/check-in/", handle_check_in, name="check_in"),
+    path("api/parking-slots/<int:slot_id>/check-out/", handle_check_out, name="check_out"),
+    path("api/parking-slots/<int:slot_id>/details/", get_slot_details, name="slot_details"),
 ]
 
 if settings.DEBUG:

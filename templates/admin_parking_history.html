@@ -335,6 +335,12 @@
     border:1px solid #bfdbfe;
   }
 
+  .status-incomplete{
+    background:#fef3c7;
+    color:#b45309;
+    border:1px solid #fde68a;
+  }
+
   .status-error{
     background:#fef2f2;
     color:#991b1b;
@@ -530,7 +536,7 @@
               <select id="status-filter" name="status-filter" class="filter-select">
                 <option value="">All</option>
                 <option value="Completed">Completed</option>
-                <option value="Active">Active</option>
+                <option value="Incomplete">Incomplete</option>
               </select>
             </div>
           </div>
@@ -865,7 +871,7 @@
         <td class="table-cell">${session.exit_time ? formatDateTime(session.exit_time) : '—'}</td>
         <td class="table-cell">${session.duration || '0h 0m'}</td>
         <td class="table-cell">
-          <span class="status-badge status-${(session.status || 'Active').toLowerCase()}">${session.status || 'Active'}</span>
+          <span class="status-badge status-${(session.status || 'Incomplete').toLowerCase()}">${session.status || 'Incomplete'}</span>
         </td>
       `;
       
