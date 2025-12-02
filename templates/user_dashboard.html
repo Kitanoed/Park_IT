@@ -303,7 +303,7 @@
     <span class="ico"></span>
     <span>Dashboard</span>
   </a>
-  <a href="{% url 'stud_parking_spaces' %}">
+  <a href="{% url 'user_parking_spaces' %}">
     <span class="ico"></span>
     <span>Parking Spaces</span>
   </a>
@@ -338,7 +338,7 @@
           <div class="sub">Logged in as</div>
           <p class="nm" style="font-size:15px;">{{ full_name }}</p>
           <p class="em">{{ email }}</p>
-          <button class="btn primary" style="margin-top:10px;" onclick="window.location='{% url 'stud_parking_spaces' %}'">
+          <button class="btn primary" style="margin-top:10px;" onclick="window.location='{% url 'user_parking_spaces' %}'">
             View Parking Map
           </button>
         </div>
