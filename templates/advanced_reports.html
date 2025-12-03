@@ -1,0 +1,1174 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Admin - Advanced Reports{% endblock %}
+
+{% block content %}
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+  :root {
+    --brand-red: #b71c1c;
+    --brand-orange: #f57c00;
+    --brand-gradient: linear-gradient(135deg, #b71c1c 0%, #f57c00 100%);
+    
+    --win-red: #ff5f57;
+    --win-yellow: #ffbd2e;
+    --win-green: #28c840;
+    
+    --surface: #ffffff;
+    --surface-elevated: #fafbfc;
+    --border: #e5e7eb;
+    --border-light: #f3f4f6;
+    --text: #111827;
+    --text-secondary: #4b5563;
+    --muted: #6b7280;
+    --canvas-bg: #f8fafc;
+    
+    --chart-primary: #b71c1c;
+    --chart-secondary: #f57c00;
+    --chart-accent: #fbbf24;
+    --chart-success: #10b981;
+    --chart-info: #3b82f6;
+  }
+
+  * { box-sizing: border-box; }
+  
+  body { 
+    background: var(--canvas-bg); 
+    font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+    margin: 0;
+    min-height: 100vh;
+  }
+
+  .dashboard-wrap {
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .app {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 20px;
+    min-height: calc(100vh - 80px);
+  }
+
+  /* Sidebar */
+  .sidebar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    height: fit-content;
+    position: sticky;
+    top: 20px;
+  }
+
+  .brand {
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .dots-container {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    transition: transform 0.2s;
+  }
+  .dot:hover { transform: scale(1.2); }
+  .dot.red { background: var(--win-red); }
+  .dot.yellow { background: var(--win-yellow); }
+  .dot.green { background: var(--win-green); }
+
+  .park-brand {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    font-size: 22px;
+    line-height: 1;
+  }
+  .park-brand .p1 { color: var(--brand-red); }
+  .park-brand .p2 { color: #ffb400; }
+  .brand-subtitle { 
+    font-weight: 500; 
+    color: var(--muted); 
+    font-size: 12px; 
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .nav {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .nav a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    color: var(--text);
+    background: var(--surface);
+    transition: all 0.2s ease;
+    font-weight: 500;
+    font-size: 14px;
+  }
+
+  .nav a:hover {
+    background: var(--surface-elevated);
+    border-color: var(--border);
+    transform: translateX(4px);
+  }
+
+  .nav a.active {
+    background: var(--brand-gradient);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(183, 28, 28, 0.3);
+  }
+
+  .nav-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: var(--surface-elevated);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+
+  .nav a.active .nav-icon {
+    background: rgba(255,255,255,0.2);
+  }
+
+  .spacer { flex: 1; }
+
+  .profile {
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .profile:hover {
+    border-color: var(--brand-red);
+    background: #fff5f5;
+  }
+
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--brand-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  .profile-info .nm { font-weight: 600; font-size: 13px; color: var(--text); }
+  .profile-info .em { font-size: 11px; color: var(--muted); }
+
+  /* Main Content */
+  .main {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* Page Header */
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .header-left h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0 0 6px;
+    letter-spacing: -0.5px;
+  }
+
+  .header-left p {
+    color: var(--muted);
+    font-size: 14px;
+    margin: 0;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  /* Buttons */
+  .btn {
+    padding: 12px 20px;
+    border-radius: 12px;
+    border: none;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: inherit;
+    text-decoration: none;
+  }
+
+  .btn-primary {
+    background: var(--brand-gradient);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(183, 28, 28, 0.25);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(183, 28, 28, 0.35);
+  }
+
+  .btn-secondary {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--brand-red);
+    color: var(--brand-red);
+    transform: translateY(-1px);
+  }
+
+  /* Stats Grid */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--brand-gradient);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  }
+
+  .stat-card:hover::before {
+    opacity: 1;
+  }
+
+  .stat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+  }
+
+  .stat-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: var(--brand-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 20px;
+  }
+
+  .stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .stat-change {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-top: 8px;
+  }
+
+  .stat-change.positive { color: var(--chart-success); }
+  .stat-change.negative { color: var(--win-red); }
+
+  /* Card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .card-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .card-title-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--surface-elevated);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+
+  /* Filters Section */
+  .filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+  }
+
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .filter-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .filter-input,
+  .filter-select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--surface);
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+
+  .filter-input:focus,
+  .filter-select:focus {
+    outline: none;
+    border-color: var(--brand-red);
+    box-shadow: 0 0 0 3px rgba(183, 28, 28, 0.1);
+  }
+
+  .filter-actions {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+  }
+
+  /* Charts Grid */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 20px;
+  }
+
+  .chart-container {
+    height: 280px;
+    position: relative;
+  }
+
+  /* Table */
+  .table-container {
+    overflow-x: auto;
+    margin-top: 8px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 800px;
+  }
+
+  .data-table th {
+    text-align: left;
+    padding: 14px 16px;
+    background: var(--surface-elevated);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+  }
+
+  .data-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-light);
+    color: var(--text);
+  }
+
+  .data-table tbody tr {
+    transition: background 0.2s;
+  }
+
+  .data-table tbody tr:hover {
+    background: var(--surface-elevated);
+  }
+
+  .data-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  /* Status Badge */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  .status-badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+
+  .status-completed {
+    background: #ecfdf5;
+    color: #065f46;
+  }
+
+  .status-completed::before {
+    background: #10b981;
+  }
+
+  .status-active {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .status-active::before {
+    background: #f59e0b;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Vehicle Plate Style */
+  .plate {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    background: var(--surface-elevated);
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    font-size: 12px;
+  }
+
+  /* No Data State */
+  .no-data {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--muted);
+  }
+
+  .no-data-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  .no-data-text {
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  /* Export Button Animation */
+  .btn-export {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-export::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.4s, height 0.4s;
+  }
+
+  .btn-export:active::after {
+    width: 200px;
+    height: 200px;
+  }
+
+  /* Loading State */
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: var(--muted);
+  }
+
+  .spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid var(--border);
+    border-top-color: var(--brand-red);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 12px;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* Responsive */
+  @media (max-width: 1280px) {
+    .charts-grid { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 1024px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { 
+      position: relative; 
+      top: 0; 
+    }
+  }
+
+  @media (max-width: 640px) {
+    .dashboard-wrap { padding: 12px; }
+    .stats-grid { grid-template-columns: 1fr; }
+    .filters-grid { grid-template-columns: 1fr; }
+    .header-actions { width: 100%; }
+    .btn { width: 100%; justify-content: center; }
+  }
+
+  /* Tooltips */
+  [data-tooltip] {
+    position: relative;
+  }
+
+  [data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 12px;
+    background: var(--text);
+    color: white;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 8px;
+    white-space: nowrap;
+    margin-bottom: 8px;
+    z-index: 100;
+  }
+</style>
+
+<div class="dashboard-wrap">
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="dots-container">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <div>
+          <div class="park-brand">
+            <span class="p1">Park</span><span class="p2">IT!</span>
+          </div>
+          <div class="brand-subtitle">Analytics</div>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <a href="{% url 'dashboard' %}">
+          <span class="nav-icon">📊</span>
+          <span>Dashboard</span>
+        </a>
+        <a href="{% url 'parking_spaces' %}">
+          <span class="nav-icon">🅿️</span>
+          <span>Parking Spaces</span>
+        </a>
+        <a href="{% url 'admin_parking_history' %}">
+          <span class="nav-icon">📋</span>
+          <span>Parking History</span>
+        </a>
+        <a class="active" href="{% url 'advanced_reports' %}">
+          <span class="nav-icon">📈</span>
+          <span>Advanced Reports</span>
+        </a>
+        <a href="{% url 'manage_users' %}">
+          <span class="nav-icon">👥</span>
+          <span>Manage Users</span>
+        </a>
+      </nav>
+
+      <div class="spacer"></div>
+
+      <div class="profile" onclick="window.location='{% url 'dashboard' %}'">
+        <div class="avatar">{{ full_name|slice:":1"|upper }}</div>
+        <div class="profile-info">
+          <div class="nm">{{ full_name|default:"Admin" }}</div>
+          <div class="em">{{ email|default:"admin@parkit.com" }}</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main">
+      <!-- Page Header -->
+      <div class="page-header">
+        <div class="header-left">
+          <h1>Advanced Reports</h1>
+          <p>Comprehensive parking analytics and usage insights</p>
+        </div>
+        <div class="header-actions">
+          <button type="button" class="btn btn-secondary" onclick="window.print()">
+            <span>🖨️</span> Print Report
+          </button>
+          <button type="button" class="btn btn-primary btn-export" onclick="exportToCSV()">
+            <span>📥</span> Export CSV
+          </button>
+        </div>
+      </div>
+
+      <!-- Stats Overview -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-header">
+            <div class="stat-label">Total Sessions</div>
+            <div class="stat-icon">🚗</div>
+          </div>
+          <div class="stat-value">{{ total_sessions|default:"0" }}</div>
+          <div class="stat-change positive">
+            <span>↑</span> From selected period
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <div class="stat-label">Completed</div>
+            <div class="stat-icon">✓</div>
+          </div>
+          <div class="stat-value">{{ completed_sessions|default:"0" }}</div>
+          <div class="stat-change positive">
+            <span>✓</span> Sessions with exits
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <div class="stat-label">Active Now</div>
+            <div class="stat-icon">🔴</div>
+          </div>
+          <div class="stat-value">{{ active_sessions|default:"0" }}</div>
+          <div class="stat-change">
+            <span>●</span> Currently parked
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <div class="stat-label">Avg Duration</div>
+            <div class="stat-icon">⏱️</div>
+          </div>
+          <div class="stat-value">{{ avg_duration|default:"0m" }}</div>
+          <div class="stat-change">
+            <span>~</span> Per session
+          </div>
+        </div>
+      </div>
+
+      <!-- Filters Card -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">
+            <span class="card-title-icon">🔍</span>
+            Filter Reports
+          </h3>
+        </div>
+        <form method="GET" action="{% url 'advanced_reports' %}" id="filter-form">
+          <div class="filters-grid">
+            <div class="filter-group">
+              <label class="filter-label">Date Range</label>
+              <select name="date_range" class="filter-select" id="date-range">
+                <option value="7" {% if date_range == "7" %}selected{% endif %}>Last 7 days</option>
+                <option value="30" {% if date_range == "30" %}selected{% endif %}>Last 30 days</option>
+                <option value="90" {% if date_range == "90" %}selected{% endif %}>Last 90 days</option>
+                <option value="180" {% if date_range == "180" %}selected{% endif %}>Last 6 months</option>
+                <option value="365" {% if date_range == "365" %}selected{% endif %}>Last year</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label class="filter-label">Parking Lot</label>
+              <select name="lot_id" class="filter-select" id="lot-filter">
+                <option value="">All Parking Lots</option>
+                {% for lot in parking_lots %}
+                <option value="{{ lot.id }}" {% if selected_lot == lot.id|stringformat:"s" %}selected{% endif %}>
+                  {{ lot.name|default:lot.code }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label class="filter-label">Vehicle Plate</label>
+              <input type="text" name="vehicle" class="filter-input" 
+                     placeholder="Search plate..." 
+                     value="{{ vehicle_search|default:'' }}" 
+                     id="vehicle-search">
+            </div>
+
+            <div class="filter-actions">
+              <button type="submit" class="btn btn-primary" style="flex: 1;">
+                Apply Filters
+              </button>
+              <button type="button" class="btn btn-secondary" onclick="clearFilters()">
+                Clear
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Charts Section -->
+      <div class="charts-grid">
+        <!-- Monthly Usage Chart -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <span class="card-title-icon">📅</span>
+              Monthly Usage Trends
+            </h3>
+          </div>
+          <div class="chart-container">
+            <canvas id="monthlyChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Peak Hours Chart -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <span class="card-title-icon">⏰</span>
+              Peak Parking Hours
+            </h3>
+          </div>
+          <div class="chart-container">
+            <canvas id="peakHoursChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Lot Distribution Chart -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <span class="card-title-icon">🏢</span>
+              Usage by Parking Lot
+            </h3>
+          </div>
+          <div class="chart-container">
+            <canvas id="lotDistributionChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Daily Usage Chart -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <span class="card-title-icon">📈</span>
+              Daily Usage (Last 30 Days)
+            </h3>
+          </div>
+          <div class="chart-container">
+            <canvas id="dailyChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detailed Logs Table -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">
+            <span class="card-title-icon">📋</span>
+            Detailed Parking Logs
+          </h3>
+          <span style="font-size: 13px; color: var(--muted);">
+            Showing {{ parking_logs|length }} of {{ total_sessions }} records
+          </span>
+        </div>
+        
+        {% if parking_logs %}
+        <div class="table-container">
+          <table class="data-table" id="logs-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Vehicle Plate</th>
+                <th>Parking Lot</th>
+                <th>Entry Time</th>
+                <th>Exit Time</th>
+                <th>Duration</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for log in parking_logs %}
+              <tr>
+                <td><code style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted);">#{{ log.id }}</code></td>
+                <td><span class="plate">{{ log.vehicle_plate }}</span></td>
+                <td>{{ log.lot_name }}</td>
+                <td>{{ log.entry_time|date:"M d, Y H:i" }}</td>
+                <td>{% if log.exit_time %}{{ log.exit_time|date:"M d, Y H:i" }}{% else %}<span style="color: var(--muted);">—</span>{% endif %}</td>
+                <td><strong>{{ log.duration }}</strong></td>
+                <td>
+                  <span class="status-badge status-{{ log.status_class }}">
+                    {{ log.status }}
+                  </span>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="no-data">
+          <div class="no-data-icon">📭</div>
+          <div class="no-data-text">No parking logs found for the selected filters</div>
+        </div>
+        {% endif %}
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+  'use strict';
+
+  // Chart color palette
+  const colors = {
+    primary: '#b71c1c',
+    secondary: '#f57c00',
+    accent: '#fbbf24',
+    success: '#10b981',
+    info: '#3b82f6',
+    gradient: (ctx) => {
+      const gradient = ctx.createLinearGradient(0, 0, 0, 280);
+      gradient.addColorStop(0, 'rgba(183, 28, 28, 0.3)');
+      gradient.addColorStop(1, 'rgba(183, 28, 28, 0.02)');
+      return gradient;
+    }
+  };
+
+  // Common chart options
+  const commonOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false
+      },
+      tooltip: {
+        backgroundColor: '#111827',
+        titleFont: { family: 'Space Grotesk', weight: '600' },
+        bodyFont: { family: 'Space Grotesk' },
+        padding: 12,
+        cornerRadius: 8,
+        displayColors: false
+      }
+    }
+  };
+
+  // Monthly Usage Chart
+  const monthlyCtx = document.getElementById('monthlyChart');
+  if (monthlyCtx) {
+    new Chart(monthlyCtx, {
+      type: 'line',
+      data: {
+        labels: {{ monthly_labels|safe }},
+        datasets: [{
+          label: 'Parking Sessions',
+          data: {{ monthly_usage|safe }},
+          borderColor: colors.primary,
+          backgroundColor: colors.gradient(monthlyCtx.getContext('2d')),
+          borderWidth: 3,
+          tension: 0.4,
+          fill: true,
+          pointRadius: 4,
+          pointBackgroundColor: '#fff',
+          pointBorderColor: colors.primary,
+          pointBorderWidth: 2,
+          pointHoverRadius: 6
+        }]
+      },
+      options: {
+        ...commonOptions,
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(0,0,0,0.05)' },
+            ticks: { font: { family: 'JetBrains Mono' } }
+          },
+          x: {
+            grid: { display: false },
+            ticks: { font: { family: 'Space Grotesk' } }
+          }
+        }
+      }
+    });
+  }
+
+  // Peak Hours Chart
+  const peakCtx = document.getElementById('peakHoursChart');
+  if (peakCtx) {
+    new Chart(peakCtx, {
+      type: 'bar',
+      data: {
+        labels: {{ peak_hour_labels|safe }},
+        datasets: [{
+          label: 'Sessions',
+          data: {{ peak_hour_values|safe }},
+          backgroundColor: [
+            colors.primary,
+            colors.secondary,
+            colors.accent,
+            colors.success,
+            colors.info
+          ],
+          borderRadius: 8,
+          barThickness: 40
+        }]
+      },
+      options: {
+        ...commonOptions,
+        indexAxis: 'y',
+        scales: {
+          x: {
+            beginAtZero: true,
+            grid: { color: 'rgba(0,0,0,0.05)' },
+            ticks: { font: { family: 'JetBrains Mono' } }
+          },
+          y: {
+            grid: { display: false },
+            ticks: { font: { family: 'JetBrains Mono', weight: '600' } }
+          }
+        }
+      }
+    });
+  }
+
+  // Lot Distribution Chart
+  const lotCtx = document.getElementById('lotDistributionChart');
+  if (lotCtx) {
+    new Chart(lotCtx, {
+      type: 'doughnut',
+      data: {
+        labels: {{ lot_labels|safe }},
+        datasets: [{
+          data: {{ lot_values|safe }},
+          backgroundColor: [
+            colors.primary,
+            colors.secondary,
+            colors.accent,
+            colors.success,
+            colors.info,
+            '#8b5cf6',
+            '#ec4899'
+          ],
+          borderWidth: 0,
+          hoverOffset: 8
+        }]
+      },
+      options: {
+        ...commonOptions,
+        cutout: '65%',
+        plugins: {
+          legend: {
+            display: true,
+            position: 'right',
+            labels: {
+              font: { family: 'Space Grotesk', size: 12 },
+              padding: 16,
+              usePointStyle: true,
+              pointStyle: 'circle'
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Daily Usage Chart
+  const dailyCtx = document.getElementById('dailyChart');
+  if (dailyCtx) {
+    new Chart(dailyCtx, {
+      type: 'bar',
+      data: {
+        labels: {{ daily_labels|safe }},
+        datasets: [{
+          label: 'Daily Sessions',
+          data: {{ daily_usage|safe }},
+          backgroundColor: colors.secondary,
+          borderRadius: 4,
+          barThickness: 12
+        }]
+      },
+      options: {
+        ...commonOptions,
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(0,0,0,0.05)' },
+            ticks: { font: { family: 'JetBrains Mono' } }
+          },
+          x: {
+            grid: { display: false },
+            ticks: { 
+              font: { family: 'Space Grotesk', size: 10 },
+              maxRotation: 45,
+              minRotation: 45
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Export to CSV function
+  window.exportToCSV = function() {
+    // Get current filter values
+    const dateRange = document.getElementById('date-range').value;
+    const lotId = document.getElementById('lot-filter').value;
+    const vehicle = document.getElementById('vehicle-search').value;
+
+    // Build URL with filters
+    const params = new URLSearchParams();
+    if (dateRange) params.append('date_range', dateRange);
+    if (lotId) params.append('lot_id', lotId);
+    if (vehicle) params.append('vehicle', vehicle);
+
+    // Redirect to CSV download endpoint
+    window.location.href = '{% url "export_parking_csv" %}?' + params.toString();
+  };
+
+  // Clear filters function
+  window.clearFilters = function() {
+    document.getElementById('date-range').value = '30';
+    document.getElementById('lot-filter').value = '';
+    document.getElementById('vehicle-search').value = '';
+    document.getElementById('filter-form').submit();
+  };
+})();
+</script>
+
+{% endblock %}
+

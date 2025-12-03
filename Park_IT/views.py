@@ -2666,3 +2666,539 @@ def get_slot_details(request, slot_id):
         
     except Exception as e:
         return JsonResponse({'error': f'Failed to get slot details: {str(e)}'}, status=500)
+
+
+class AdvancedReportsView(View):
+    """Advanced Reports page for admin - shows analytics, charts, and export options"""
+    
+    def get(self, request):
+        if 'access_token' not in request.session:
+            messages.error(request, 'Please log in first.')
+            return redirect('login')
+
+        try:
+            user_id = request.session.get('user_id')
+            user_response = supabase.table('users').select(
+                'first_name, last_name, email, student_employee_id, role'
+            ).eq('id', user_id).execute()
+
+            if not user_response.data:
+                messages.error(request, 'User not found.')
+                return redirect('home')
+
+            user_data = user_response.data[0]
+            raw_role = user_data.get('role') or 'user'
+            role_name = str(raw_role).strip().lower() if raw_role else 'user'
+            if role_name not in ['admin', 'user']:
+                role_name = 'user'
+
+            # Only allow admins
+            if role_name != 'admin':
+                messages.error(request, 'Access denied. Admins only.')
+                return redirect('user_dashboard')
+
+        except Exception as e:
+            messages.error(request, f'Error loading user: {str(e)}')
+            return redirect('home')
+
+        # Get filter parameters
+        date_range = request.GET.get('date_range', '30')
+        selected_lot = request.GET.get('lot_id', '')
+        vehicle_search = request.GET.get('vehicle', '')
+        selected_month = request.GET.get('month', '')
+
+        # Calculate date range
+        now = timezone.now()
+        try:
+            days_back = int(date_range)
+        except ValueError:
+            days_back = 30
+        
+        start_date = now - timedelta(days=days_back)
+
+        # Fetch parking lots for filter dropdown
+        try:
+            lots_resp = supabase.table('parking_lot').select('id, name, code').order('code').execute()
+            parking_lots = lots_resp.data or []
+        except Exception:
+            parking_lots = []
+
+        # Fetch parking sessions data
+        try:
+            entries_query = supabase.table('entries_exits').select(
+                'id, time, vehicle_id, action, lot_id'
+            ).eq('action', 'entry').gte('time', start_date.isoformat()).order('time', desc=True)
+            
+            if selected_lot:
+                entries_query = entries_query.eq('lot_id', int(selected_lot))
+            
+            entries_response = entries_query.execute()
+            entry_records = entries_response.data or []
+        except Exception:
+            entry_records = []
+
+        # Fetch vehicle data
+        vehicle_ids = list(set([e['vehicle_id'] for e in entry_records if e.get('vehicle_id')]))
+        vehicles_map = {}
+        if vehicle_ids:
+            try:
+                vehicles_query = supabase.table('vehicle').select('id, plate').in_('id', vehicle_ids)
+                if vehicle_search:
+                    vehicles_query = vehicles_query.ilike('plate', f'%{vehicle_search}%')
+                vehicles_response = vehicles_query.execute()
+                vehicles_map = {v['id']: v.get('plate', '') for v in (vehicles_response.data or [])}
+            except Exception:
+                vehicles_map = {}
+
+        # Fetch lots mapping
+        lot_ids = list(set([e['lot_id'] for e in entry_records if e.get('lot_id')]))
+        lots_map = {}
+        if lot_ids:
+            try:
+                lots_data = supabase.table('parking_lot').select('id, name').in_('id', lot_ids).execute()
+                lots_map = {l['id']: l.get('name', '') for l in (lots_data.data or [])}
+            except Exception:
+                lots_map = {}
+
+        # Build sessions with exit data
+        parking_logs = []
+        total_duration_minutes = 0
+        completed_count = 0
+
+        for entry in entry_records:
+            vehicle_id = entry.get('vehicle_id')
+            lot_id = entry.get('lot_id')
+            entry_time = entry.get('time')
+
+            if vehicle_search and vehicle_id not in vehicles_map:
+                continue
+
+            plate_number = vehicles_map.get(vehicle_id, 'Unknown')
+            lot_name_value = lots_map.get(lot_id, 'Unknown')
+
+            # Find exit
+            exit_time = None
+            try:
+                exit_resp = supabase.table('entries_exits').select('time').eq(
+                    'vehicle_id', vehicle_id
+                ).eq('action', 'exit').gte('time', entry_time).order('time').limit(1).execute()
+                if exit_resp.data:
+                    exit_time = exit_resp.data[0].get('time')
+            except Exception:
+                pass
+
+            status = 'Completed' if exit_time else 'Active'
+            status_class = 'completed' if exit_time else 'active'
+            duration = calculate_duration(entry_time, exit_time)
+
+            # Track stats
+            if exit_time:
+                completed_count += 1
+                try:
+                    entry_dt = datetime.fromisoformat(entry_time.replace('Z', '+00:00'))
+                    exit_dt = datetime.fromisoformat(exit_time.replace('Z', '+00:00'))
+                    total_duration_minutes += (exit_dt - entry_dt).total_seconds() / 60
+                except Exception:
+                    pass
+
+            parking_logs.append({
+                'id': entry.get('id'),
+                'vehicle_plate': plate_number,
+                'lot_name': lot_name_value,
+                'entry_time': entry_time,
+                'exit_time': exit_time,
+                'duration': duration,
+                'status': status,
+                'status_class': status_class,
+            })
+
+        # Calculate statistics
+        total_sessions = len(parking_logs)
+        avg_duration_minutes = total_duration_minutes / completed_count if completed_count > 0 else 0
+        avg_duration_hours = avg_duration_minutes / 60
+        if avg_duration_hours >= 1:
+            avg_duration = f"{int(avg_duration_hours)}h {int(avg_duration_minutes % 60)}m"
+        else:
+            avg_duration = f"{int(avg_duration_minutes)}m"
+
+        # Calculate monthly usage data for chart
+        monthly_data = defaultdict(int)
+        for log in parking_logs:
+            try:
+                entry_dt = datetime.fromisoformat(log['entry_time'].replace('Z', '+00:00'))
+                month_key = entry_dt.strftime('%b %Y')
+                monthly_data[month_key] += 1
+            except Exception:
+                pass
+
+        # Sort by date and prepare for chart
+        sorted_months = sorted(monthly_data.items(), 
+                               key=lambda x: datetime.strptime(x[0], '%b %Y'))
+        monthly_labels = [m[0] for m in sorted_months[-12:]]  # Last 12 months
+        monthly_usage = [m[1] for m in sorted_months[-12:]]
+
+        # Daily usage for the selected period (for more granular chart)
+        daily_data = defaultdict(int)
+        for log in parking_logs:
+            try:
+                entry_dt = datetime.fromisoformat(log['entry_time'].replace('Z', '+00:00'))
+                day_key = entry_dt.strftime('%b %d')
+                daily_data[day_key] += 1
+            except Exception:
+                pass
+
+        # Peak hours analysis
+        hourly_data = defaultdict(int)
+        for log in parking_logs:
+            try:
+                entry_dt = datetime.fromisoformat(log['entry_time'].replace('Z', '+00:00'))
+                hour = entry_dt.hour
+                hourly_data[hour] += 1
+            except Exception:
+                pass
+
+        peak_hours = sorted(hourly_data.items(), key=lambda x: x[1], reverse=True)[:5]
+        peak_hour_labels = [f"{h[0]:02d}:00" for h in peak_hours]
+        peak_hour_values = [h[1] for h in peak_hours]
+
+        # Lot usage breakdown
+        lot_usage = defaultdict(int)
+        for log in parking_logs:
+            lot_usage[log['lot_name']] += 1
+        
+        lot_labels = list(lot_usage.keys())
+        lot_values = list(lot_usage.values())
+
+        import json
+
+        context = {
+            'role': role_name,
+            'full_name': f"{user_data['first_name']} {user_data['last_name']}",
+            'email': user_data['email'],
+            'username': user_data['student_employee_id'],
+            # Stats
+            'total_sessions': total_sessions,
+            'avg_duration': avg_duration,
+            'completed_sessions': completed_count,
+            'active_sessions': total_sessions - completed_count,
+            # Filters
+            'parking_lots': parking_lots,
+            'date_range': date_range,
+            'selected_lot': selected_lot,
+            'vehicle_search': vehicle_search,
+            'selected_month': selected_month,
+            # Data
+            'parking_logs': parking_logs[:100],  # Limit for display
+            # Chart data (JSON encoded)
+            'monthly_labels': json.dumps(monthly_labels if monthly_labels else ['No Data']),
+            'monthly_usage': json.dumps(monthly_usage if monthly_usage else [0]),
+            'daily_labels': json.dumps(list(daily_data.keys())[-30:]),
+            'daily_usage': json.dumps(list(daily_data.values())[-30:]),
+            'peak_hour_labels': json.dumps(peak_hour_labels if peak_hour_labels else ['No Data']),
+            'peak_hour_values': json.dumps(peak_hour_values if peak_hour_values else [0]),
+            'lot_labels': json.dumps(lot_labels if lot_labels else ['No Data']),
+            'lot_values': json.dumps(lot_values if lot_values else [0]),
+        }
+
+        return render(request, 'advanced_reports.html', context)
+
+
+def export_parking_csv(request):
+    """
+    API Endpoint: GET /api/admin/reports/export-csv/
+    
+    Exports filtered parking logs to CSV file.
+    Admin-only endpoint.
+    """
+    import csv
+    from django.http import HttpResponse
+    
+    # Authentication check
+    if 'access_token' not in request.session:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    
+    try:
+        # Verify user is admin
+        user_id = request.session.get('user_id')
+        user_response = supabase.table('users').select('role').eq('id', user_id).execute()
+        
+        if not user_response.data:
+            return JsonResponse({'error': 'User not found'}, status=404)
+        
+        raw_role = user_response.data[0].get('role') or 'user'
+        role_name = str(raw_role).strip().lower() if raw_role else 'user'
+        
+        if role_name != 'admin':
+            return JsonResponse({'error': 'Admin privileges required'}, status=403)
+    except Exception as e:
+        return JsonResponse({'error': f'Authentication error: {str(e)}'}, status=500)
+    
+    # Get filter parameters
+    date_range = request.GET.get('date_range', '30')
+    selected_lot = request.GET.get('lot_id', '')
+    vehicle_search = request.GET.get('vehicle', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    status_filter = request.GET.get('status', '')
+
+    # Calculate date range
+    now = timezone.now()
+    if date_from:
+        start_date = datetime.fromisoformat(date_from)
+    else:
+        try:
+            days_back = int(date_range)
+        except ValueError:
+            days_back = 30
+        start_date = now - timedelta(days=days_back)
+
+    if date_to:
+        end_date = datetime.fromisoformat(date_to) + timedelta(days=1)
+    else:
+        end_date = now + timedelta(days=1)
+
+    try:
+        # Fetch entries
+        entries_query = supabase.table('entries_exits').select(
+            'id, time, vehicle_id, action, lot_id'
+        ).eq('action', 'entry').gte('time', start_date.isoformat()).lte('time', end_date.isoformat()).order('time', desc=True)
+        
+        if selected_lot:
+            entries_query = entries_query.eq('lot_id', int(selected_lot))
+        
+        entries_response = entries_query.execute()
+        entry_records = entries_response.data or []
+
+        # Fetch vehicles
+        vehicle_ids = list(set([e['vehicle_id'] for e in entry_records if e.get('vehicle_id')]))
+        vehicles_map = {}
+        if vehicle_ids:
+            vehicles_query = supabase.table('vehicle').select('id, plate').in_('id', vehicle_ids)
+            if vehicle_search:
+                vehicles_query = vehicles_query.ilike('plate', f'%{vehicle_search}%')
+            vehicles_response = vehicles_query.execute()
+            vehicles_map = {v['id']: v.get('plate', '') for v in (vehicles_response.data or [])}
+
+        # Fetch lots
+        lot_ids = list(set([e['lot_id'] for e in entry_records if e.get('lot_id')]))
+        lots_map = {}
+        if lot_ids:
+            lots_data = supabase.table('parking_lot').select('id, name').in_('id', lot_ids).execute()
+            lots_map = {l['id']: l.get('name', '') for l in (lots_data.data or [])}
+
+        # Build CSV data
+        csv_data = []
+        for entry in entry_records:
+            vehicle_id = entry.get('vehicle_id')
+            lot_id = entry.get('lot_id')
+            entry_time = entry.get('time')
+
+            if vehicle_search and vehicle_id not in vehicles_map:
+                continue
+
+            plate_number = vehicles_map.get(vehicle_id, 'Unknown')
+            lot_name_value = lots_map.get(lot_id, 'Unknown')
+
+            # Find exit
+            exit_time = None
+            try:
+                exit_resp = supabase.table('entries_exits').select('time').eq(
+                    'vehicle_id', vehicle_id
+                ).eq('action', 'exit').gte('time', entry_time).order('time').limit(1).execute()
+                if exit_resp.data:
+                    exit_time = exit_resp.data[0].get('time')
+            except Exception:
+                pass
+
+            status = 'Completed' if exit_time else 'Active'
+            
+            # Apply status filter
+            if status_filter and status != status_filter:
+                continue
+
+            duration = calculate_duration(entry_time, exit_time)
+
+            # Format datetime for CSV
+            try:
+                entry_dt = datetime.fromisoformat(entry_time.replace('Z', '+00:00'))
+                entry_formatted = entry_dt.strftime('%Y-%m-%d %H:%M:%S')
+            except Exception:
+                entry_formatted = entry_time
+
+            if exit_time:
+                try:
+                    exit_dt = datetime.fromisoformat(exit_time.replace('Z', '+00:00'))
+                    exit_formatted = exit_dt.strftime('%Y-%m-%d %H:%M:%S')
+                except Exception:
+                    exit_formatted = exit_time
+            else:
+                exit_formatted = ''
+
+            csv_data.append({
+                'Session ID': entry.get('id'),
+                'Vehicle Plate': plate_number,
+                'Parking Lot': lot_name_value,
+                'Entry Time': entry_formatted,
+                'Exit Time': exit_formatted,
+                'Duration': duration,
+                'Status': status,
+            })
+
+        # Create CSV response
+        response = HttpResponse(content_type='text/csv')
+        filename = f"parking_logs_{now.strftime('%Y%m%d_%H%M%S')}.csv"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        if csv_data:
+            writer = csv.DictWriter(response, fieldnames=csv_data[0].keys())
+            writer.writeheader()
+            writer.writerows(csv_data)
+        else:
+            writer = csv.writer(response)
+            writer.writerow(['No data found for the selected filters'])
+
+        return response
+
+    except Exception as e:
+        return JsonResponse({'error': f'Export failed: {str(e)}'}, status=500)
+
+
+def monthly_report_api(request):
+    """
+    API Endpoint: GET /api/admin/reports/monthly/
+    
+    Returns monthly usage statistics for the reports dashboard.
+    Admin-only endpoint.
+    """
+    # Authentication check
+    if 'access_token' not in request.session:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    
+    try:
+        # Verify user is admin
+        user_id = request.session.get('user_id')
+        user_response = supabase.table('users').select('role').eq('id', user_id).execute()
+        
+        if not user_response.data:
+            return JsonResponse({'error': 'User not found'}, status=404)
+        
+        raw_role = user_response.data[0].get('role') or 'user'
+        role_name = str(raw_role).strip().lower() if raw_role else 'user'
+        
+        if role_name != 'admin':
+            return JsonResponse({'error': 'Admin privileges required'}, status=403)
+    except Exception as e:
+        return JsonResponse({'error': f'Authentication error: {str(e)}'}, status=500)
+
+    # Get parameters
+    year = request.GET.get('year', str(timezone.now().year))
+    month = request.GET.get('month', '')
+    lot_id = request.GET.get('lot_id', '')
+
+    try:
+        year_int = int(year)
+    except ValueError:
+        year_int = timezone.now().year
+
+    try:
+        # Build date range for the year
+        start_date = datetime(year_int, 1, 1)
+        end_date = datetime(year_int, 12, 31, 23, 59, 59)
+
+        if month:
+            try:
+                month_int = int(month)
+                start_date = datetime(year_int, month_int, 1)
+                if month_int == 12:
+                    end_date = datetime(year_int + 1, 1, 1) - timedelta(seconds=1)
+                else:
+                    end_date = datetime(year_int, month_int + 1, 1) - timedelta(seconds=1)
+            except ValueError:
+                pass
+
+        # Fetch entries for the period
+        entries_query = supabase.table('entries_exits').select(
+            'id, time, vehicle_id, action, lot_id'
+        ).eq('action', 'entry').gte('time', start_date.isoformat()).lte('time', end_date.isoformat())
+        
+        if lot_id:
+            entries_query = entries_query.eq('lot_id', int(lot_id))
+        
+        entries_response = entries_query.execute()
+        entry_records = entries_response.data or []
+
+        # Calculate monthly breakdown
+        monthly_stats = defaultdict(lambda: {
+            'entries': 0,
+            'exits': 0,
+            'total_duration_minutes': 0,
+            'completed_sessions': 0
+        })
+
+        vehicle_ids = list(set([e['vehicle_id'] for e in entry_records if e.get('vehicle_id')]))
+
+        for entry in entry_records:
+            try:
+                entry_dt = datetime.fromisoformat(entry['time'].replace('Z', '+00:00'))
+                month_key = entry_dt.strftime('%Y-%m')
+                monthly_stats[month_key]['entries'] += 1
+
+                # Find exit for duration calculation
+                vehicle_id = entry.get('vehicle_id')
+                entry_time = entry.get('time')
+                
+                exit_resp = supabase.table('entries_exits').select('time').eq(
+                    'vehicle_id', vehicle_id
+                ).eq('action', 'exit').gte('time', entry_time).order('time').limit(1).execute()
+                
+                if exit_resp.data:
+                    exit_time = exit_resp.data[0].get('time')
+                    monthly_stats[month_key]['exits'] += 1
+                    monthly_stats[month_key]['completed_sessions'] += 1
+                    
+                    try:
+                        exit_dt = datetime.fromisoformat(exit_time.replace('Z', '+00:00'))
+                        duration_minutes = (exit_dt - entry_dt).total_seconds() / 60
+                        monthly_stats[month_key]['total_duration_minutes'] += duration_minutes
+                    except Exception:
+                        pass
+            except Exception:
+                continue
+
+        # Format response
+        result = []
+        for month_key in sorted(monthly_stats.keys()):
+            stats = monthly_stats[month_key]
+            avg_duration = stats['total_duration_minutes'] / stats['completed_sessions'] if stats['completed_sessions'] > 0 else 0
+            
+            result.append({
+                'month': month_key,
+                'month_label': datetime.strptime(month_key, '%Y-%m').strftime('%B %Y'),
+                'total_entries': stats['entries'],
+                'total_exits': stats['exits'],
+                'completed_sessions': stats['completed_sessions'],
+                'active_sessions': stats['entries'] - stats['completed_sessions'],
+                'avg_duration_minutes': round(avg_duration, 1),
+                'avg_duration_formatted': f"{int(avg_duration // 60)}h {int(avg_duration % 60)}m" if avg_duration >= 60 else f"{int(avg_duration)}m"
+            })
+
+        # Calculate totals
+        total_entries = sum(m['total_entries'] for m in result)
+        total_exits = sum(m['total_exits'] for m in result)
+        total_completed = sum(m['completed_sessions'] for m in result)
+
+        return JsonResponse({
+            'success': True,
+            'year': year_int,
+            'month': month if month else 'all',
+            'monthly_data': result,
+            'summary': {
+                'total_entries': total_entries,
+                'total_exits': total_exits,
+                'total_completed': total_completed,
+                'total_active': total_entries - total_completed
+            }
+        })
+
+    except Exception as e:
+        return JsonResponse({'error': f'Failed to fetch monthly report: {str(e)}'}, status=500)

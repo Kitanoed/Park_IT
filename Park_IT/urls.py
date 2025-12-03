@@ -9,6 +9,7 @@ from .views import (
     UserParkingSpacesView, UnifiedLoginView, update_user_role, AdminParkingHistoryView,
     parking_history_api, ProfileForUsersView, reset_user_password, ChangePasswordView,
     AdminResetPasswordView, handle_check_in, handle_check_out, get_slot_details,
+    AdvancedReportsView, export_parking_csv, monthly_report_api,
 )
 
 urlpatterns = [
@@ -47,8 +48,12 @@ urlpatterns = [
     path("manage-users/reset-password/", reset_user_password, name="reset_user_password"),  # Legacy endpoint
     # Admin parking history (admin only)
     path("admin/parking-history/", AdminParkingHistoryView.as_view(), name="admin_parking_history"),
+    # Advanced Reports (admin only)
+    path("admin/reports/", AdvancedReportsView.as_view(), name="advanced_reports"),
     # Admin API endpoints
     path("api/admin/parking/history/", parking_history_api, name="parking_history_api"),
+    path("api/admin/reports/export-csv/", export_parking_csv, name="export_parking_csv"),
+    path("api/admin/reports/monthly/", monthly_report_api, name="monthly_report_api"),
     path("api/admin/users/<str:user_id>/role/", update_user_role, name="update_user_role"),
     # Parking slot check-in/check-out endpoints
     path("api/parking-slots/<int:slot_id>/check-in/", handle_check_in, name="check_in"),
