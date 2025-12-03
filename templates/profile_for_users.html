@@ -132,8 +132,16 @@
     justify-content: center;
     font-size: 16px;
   }
+  
+  .nav-icon i {
+    color: var(--text);
+  }
 
   .nav a.active .nav-icon { background: rgba(255,255,255,0.2); }
+  
+  .nav a.active .nav-icon i {
+    color: #fff;
+  }
   .spacer { flex: 1; }
 
   .profile-mini {
@@ -402,6 +410,10 @@
     justify-content: center;
     font-size: 16px;
   }
+  
+  .panel-icon i {
+    color: var(--text);
+  }
 
   /* Form */
   .form-field { margin-bottom: 18px; }
@@ -506,15 +518,15 @@
 
     <nav class="nav">
       <a href="{% url 'user_dashboard' %}">
-        <span class="nav-icon">🏠</span>
+        <span class="nav-icon"><i class="fas fa-home"></i></span>
         <span>Dashboard</span>
       </a>
       <a href="{% url 'user_parking_spaces' %}">
-        <span class="nav-icon">🅿️</span>
+        <span class="nav-icon"><i class="fas fa-parking"></i></span>
         <span>Parking Spaces</span>
       </a>
       <a class="active" href="{% url 'user_profile' %}">
-        <span class="nav-icon">👤</span>
+        <span class="nav-icon"><i class="fas fa-user"></i></span>
         <span>Profile</span>
       </a>
     </nav>
@@ -553,7 +565,7 @@
         <!-- Account Information -->
         <div class="panel">
           <h3 class="panel-title">
-            <span class="panel-icon">👤</span>
+            <span class="panel-icon"><i class="fas fa-user"></i></span>
             Account Information
           </h3>
           <form method="post" action="{% url 'update_profile' %}">
@@ -571,7 +583,7 @@
               <input type="email" class="field-input" name="email" value="{{ email|default:'' }}" readonly>
             </div>
             <div class="btn-row">
-              <button type="submit" class="btn-primary">💾 Save Changes</button>
+              <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save Changes</button>
             </div>
           </form>
         </div>
@@ -579,13 +591,13 @@
         <!-- Change Password -->
         <div class="panel">
           <h3 class="panel-title">
-            <span class="panel-icon">🔑</span>
+            <span class="panel-icon"><i class="fas fa-key"></i></span>
             Security
           </h3>
           <div class="password-section">
             <p>Update your password regularly to keep your account secure. Choose a strong password that you don't use elsewhere.</p>
             <a href="{% url 'change_password' %}" class="btn-primary">
-              🔐 Change Password
+              <i class="fas fa-lock"></i> Change Password
             </a>
           </div>
         </div>

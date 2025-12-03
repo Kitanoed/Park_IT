@@ -157,9 +157,17 @@
     justify-content: center;
     font-size: 16px;
   }
+  
+  .nav-icon i {
+    color: var(--text);
+  }
 
   .nav a.active .nav-icon {
     background: rgba(255,255,255,0.2);
+  }
+  
+  .nav a.active .nav-icon i {
+    color: #fff;
   }
 
   .spacer { flex: 1; }
@@ -462,6 +470,10 @@
     color: #fff;
     font-size: 20px;
   }
+  
+  .stat-icon i {
+    color: #fff;
+  }
 
   .stat-value {
     font-size: 32px;
@@ -520,6 +532,10 @@
     align-items: center;
     justify-content: center;
     font-size: 16px;
+  }
+  
+  .card-title-icon i {
+    color: var(--text);
   }
 
   /* Filters Section */
@@ -812,23 +828,23 @@
 
       <nav class="nav">
         <a href="{% url 'dashboard' %}">
-          <span class="nav-icon">📊</span>
+          <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
           <span>Dashboard</span>
         </a>
         <a href="{% url 'parking_spaces' %}">
-          <span class="nav-icon">🅿️</span>
+          <span class="nav-icon"><i class="fas fa-parking"></i></span>
           <span>Parking Spaces</span>
         </a>
         <a href="{% url 'admin_parking_history' %}">
-          <span class="nav-icon">📋</span>
+          <span class="nav-icon"><i class="fas fa-clipboard-list"></i></span>
           <span>Parking History</span>
         </a>
         <a class="active" href="{% url 'advanced_reports' %}">
-          <span class="nav-icon">📈</span>
+          <span class="nav-icon"><i class="fas fa-chart-line"></i></span>
           <span>Advanced Reports</span>
         </a>
         <a href="{% url 'manage_users' %}">
-          <span class="nav-icon">👥</span>
+          <span class="nav-icon"><i class="fas fa-users"></i></span>
           <span>Manage Users</span>
         </a>
       </nav>
@@ -854,10 +870,10 @@
         </div>
         <div class="header-actions">
           <button type="button" class="btn btn-secondary" onclick="window.print()">
-            <span>🖨️</span> Print Report
+            <i class="fas fa-print"></i> Print Report
           </button>
           <button type="button" class="btn btn-primary btn-export" onclick="exportToCSV()">
-            <span>📥</span> Export CSV
+            <i class="fas fa-download"></i> Export CSV
           </button>
         </div>
       </div>
@@ -867,7 +883,7 @@
         <div class="stat-card">
           <div class="stat-header">
             <div class="stat-label">Total Sessions</div>
-            <div class="stat-icon">🚗</div>
+            <div class="stat-icon"><i class="fas fa-car"></i></div>
           </div>
           <div class="stat-value">{{ total_sessions|default:"0" }}</div>
           <div class="stat-change positive">
@@ -878,18 +894,18 @@
         <div class="stat-card">
           <div class="stat-header">
             <div class="stat-label">Completed</div>
-            <div class="stat-icon">✓</div>
+            <div class="stat-icon"><i class="fas fa-check"></i></div>
           </div>
           <div class="stat-value">{{ completed_sessions|default:"0" }}</div>
           <div class="stat-change positive">
-            <span>✓</span> Sessions with exits
+            <i class="fas fa-check"></i> Sessions with exits
           </div>
         </div>
 
         <div class="stat-card">
           <div class="stat-header">
             <div class="stat-label">Active Now</div>
-            <div class="stat-icon">🔴</div>
+            <div class="stat-icon"><i class="fas fa-circle" style="color: #ef4444;"></i></div>
           </div>
           <div class="stat-value">{{ active_sessions|default:"0" }}</div>
           <div class="stat-change">
@@ -900,7 +916,7 @@
         <div class="stat-card">
           <div class="stat-header">
             <div class="stat-label">Avg Duration</div>
-            <div class="stat-icon">⏱️</div>
+            <div class="stat-icon"><i class="fas fa-hourglass-half"></i></div>
           </div>
           <div class="stat-value">{{ avg_duration|default:"0m" }}</div>
           <div class="stat-change">
@@ -913,7 +929,7 @@
       <div class="card">
         <div class="card-header">
           <h3 class="card-title">
-            <span class="card-title-icon">🔍</span>
+            <span class="card-title-icon"><i class="fas fa-search"></i></span>
             Filter Reports
           </h3>
         </div>
@@ -968,7 +984,7 @@
         <div class="card">
           <div class="card-header">
             <h3 class="card-title">
-              <span class="card-title-icon">📅</span>
+              <span class="card-title-icon"><i class="fas fa-calendar-alt"></i></span>
               Monthly Usage Trends
             </h3>
           </div>
@@ -981,7 +997,7 @@
         <div class="card">
           <div class="card-header">
             <h3 class="card-title">
-              <span class="card-title-icon">⏰</span>
+              <span class="card-title-icon"><i class="fas fa-clock"></i></span>
               Peak Parking Hours
             </h3>
           </div>
@@ -994,7 +1010,7 @@
         <div class="card">
           <div class="card-header">
             <h3 class="card-title">
-              <span class="card-title-icon">🏢</span>
+              <span class="card-title-icon"><i class="fas fa-building"></i></span>
               Usage by Parking Lot
             </h3>
           </div>
@@ -1007,7 +1023,7 @@
         <div class="card">
           <div class="card-header">
             <h3 class="card-title">
-              <span class="card-title-icon">📈</span>
+              <span class="card-title-icon"><i class="fas fa-chart-line"></i></span>
               Daily Usage (Last 30 Days)
             </h3>
           </div>
@@ -1021,7 +1037,7 @@
       <div class="card">
         <div class="card-header">
           <h3 class="card-title">
-            <span class="card-title-icon">📋</span>
+            <span class="card-title-icon"><i class="fas fa-clipboard-list"></i></span>
             Detailed Parking Logs
           </h3>
           <span style="font-size: 13px; color: var(--muted);">

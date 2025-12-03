@@ -58,6 +58,9 @@
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(183, 28, 28, 0.15);
     }
+    .btn-auth i {
+      color: inherit;
+    }
     @media (max-width: 576px) {
       .auth-buttons {
         flex-direction: column;
@@ -67,11 +70,11 @@
 
   <div class="auth-buttons">
     <a href="{% url 'signIn' %}" class="btn-auth primary">
-      <span>🔑</span>
+      <i class="fas fa-key"></i>
       <span>Sign In</span>
     </a>
     <a href="{% url 'register' %}" class="btn-auth secondary">
-      <span>✨</span>
+      <i class="fas fa-user-plus"></i>
       <span>Create Account</span>
     </a>
   </div>
