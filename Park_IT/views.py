@@ -307,7 +307,7 @@ class RegisterView(View):
             # All new registrations default to "user" role - no role selection allowed
             # Admin role can only be assigned by existing admins via server-side API
             
-            # Insert user profile with role="user" (default)
+            # Insert user profile with role_id=1 (default "user" role)
             supabase.table('users').insert({
                 'id': response.user.id,
                 'first_name': data['first_name'],
@@ -315,6 +315,7 @@ class RegisterView(View):
                 'email': data['email'],
                 'student_employee_id': data['student_id'],
                 'role': 'user',  # Default role - cannot be changed during registration
+                'role_id': 1,  # Default role_id for "user" role
                 'status': 'active'
             }).execute()
 
@@ -1382,6 +1383,8 @@ class AddUserView(View):
                 return self._render_form(request, current_user, role_name, roles, form_values)
 
             # Insert into users profile table with role field (always lowercase)
+            # Map role to role_id: 'user' = 1, 'admin' = 2
+            role_id_map = {'user': 1, 'admin': 2}
             supabase.table('users').insert({
                 'id': auth_user.id,
                 'first_name': first_name,
@@ -1389,6 +1392,7 @@ class AddUserView(View):
                 'email': email,
                 'student_employee_id': username,
                 'role': normalized_role,  # Always save as lowercase
+                'role_id': role_id_map.get(normalized_role, 1),  # Default to user (1) if unknown
                 'status': 'active',
             }).execute()
 

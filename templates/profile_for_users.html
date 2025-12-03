@@ -5,247 +5,355 @@
 
 {% block content %}
 <style>
-  :root{
-    --brand-red:#b71c1c;
-    --brand-orange:#f57c00;
-    --surface:#ffffff;
-    --border:#eef0f3;
-    --text:#111827;
-    --muted:#6b7280;
-    --canvas-bg:#f5f7fa;
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+  :root {
+    --brand-red: #b71c1c;
+    --brand-orange: #f57c00;
+    --brand-gradient: linear-gradient(135deg, #b71c1c 0%, #f57c00 100%);
+    
+    --win-red: #ff5f57;
+    --win-yellow: #ffbd2e;
+    --win-green: #28c840;
+    
+    --surface: #ffffff;
+    --surface-elevated: #fafbfc;
+    --border: #e5e7eb;
+    --border-light: #f3f4f6;
+    --text: #111827;
+    --text-secondary: #4b5563;
+    --muted: #6b7280;
+    --canvas-bg: #f8fafc;
   }
 
-  body{ background:var(--canvas-bg); }
+  * { box-sizing: border-box; }
 
-  .layout{
-    width:100%;
-    max-width:1520px;
-    margin:0 auto;
-    padding:18px 18px 26px;
-    display:grid;
-    grid-template-columns:270px 1fr;
-    gap:14px;
+  body { 
+    background: var(--canvas-bg); 
+    font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+    margin: 0;
   }
 
-  .sidebar{
-    background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;
-    display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);
-  }
-  .brand{
-    padding-bottom:10px;border-bottom:1px solid var(--border);
-    display:flex;flex-direction:column;gap:8px;
-  }
-  .dots-container{display:flex;gap:6px;align-items:center;}
-  .dot{width:10px;height:10px;border-radius:50%}
-  .dot.red{background:#ff5f57}
-  .dot.yellow{background:#ffbd2e}
-  .dot.green{background:#28c840}
-  .txt{line-height:1.1;}
-  .park-brand{
-    font-family:Montserrat,sans-serif;
-    font-weight:800;letter-spacing:.2px;font-size:17px;line-height:1;
-  }
-  .park-brand .p1{color:var(--brand-red);}
-  .park-brand .p2{color:#ffb400;}
-  .txt .t2{font-weight:600;color:var(--muted);font-size:11px;margin-top:2px;}
-
-  .nav{display:flex;flex-direction:column;gap:10px;margin-top:8px}
-  .nav a{
-    display:flex;align-items:center;gap:10px;text-decoration:none;
-    padding:11px 12px;border-radius:12px;border:1px solid var(--border);
-    color:var(--text);background:#fff;transition:.2s;
-  }
-  .nav a:hover{transform:translateY(-1px);border-color:var(--brand-red);color:var(--brand-red)}
-  .nav a.active{
-    background:linear-gradient(135deg,var(--brand-red) 0%,var(--brand-orange) 100%);
-    color:#fff;border-color:transparent;
-  }
-  .ico{
-    width:28px;height:28px;border-radius:8px;background:#f8f9fa;
-    display:flex;align-items:center;justify-content:center;color:#6b7280;font-weight:700;
-  }
-  .spacer{flex:1}
-  .profile-mini{
-    padding:12px;border:1px solid var(--border);border-radius:12px;background:#fff;
-    display:flex;align-items:center;gap:10px;
-  }
-  .avatar{width:30px;height:30px;border-radius:50%;background:#f3f4f6}
-  .nm{font-weight:600;font-size:12px;color:var(--text)}
-  .em{font-size:11px;color:var(--muted)}
-
-  .profile-wrap{
-    width:100%;
-    margin:0;
-    padding:0 0 32px;
+  .layout {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 20px;
+    min-height: calc(100vh - 80px);
   }
 
-  .profile-card{
-    background:#fff;
-    border-radius:16px;
-    border:1px solid var(--border);
-    box-shadow:0 1px 3px rgba(0,0,0,.06);
-    padding:24px 24px 20px;
+  /* Sidebar */
+  .sidebar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    height: fit-content;
+    position: sticky;
+    top: 20px;
   }
 
-  .profile-header{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:18px;
+  .brand {
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
   }
 
-  .profile-title{
-    margin:0;
-    font-size:20px;
-    font-weight:700;
-    color:var(--text);
+  .dots-container { display: flex; gap: 6px; align-items: center; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; transition: transform 0.2s; }
+  .dot:hover { transform: scale(1.2); }
+  .dot.red { background: var(--win-red); }
+  .dot.yellow { background: var(--win-yellow); }
+  .dot.green { background: var(--win-green); }
+
+  .park-brand {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    font-size: 22px;
+    line-height: 1;
+  }
+  .park-brand .p1 { color: var(--brand-red); }
+  .park-brand .p2 { color: #ffb400; }
+  .brand-subtitle { 
+    font-weight: 500; 
+    color: var(--muted); 
+    font-size: 12px; 
+    text-transform: uppercase;
+    letter-spacing: 1px;
   }
 
-  .profile-sub{
-    font-size:12px;
-    color:var(--muted);
-    margin-top:4px;
+  .nav { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+
+  .nav a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    color: var(--text);
+    background: var(--surface);
+    transition: all 0.2s ease;
+    font-weight: 500;
+    font-size: 14px;
   }
 
-  .badge-role{
-    padding:6px 10px;
-    border-radius:999px;
-    font-size:11px;
-    font-weight:600;
-    background:#fef2f2;
-    color:var(--brand-red);
-    border:1px solid #fecaca;
+  .nav a:hover {
+    background: var(--surface-elevated);
+    border-color: var(--border);
+    transform: translateX(4px);
   }
 
-  .profile-grid{
-    display:grid;
-    grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);
-    gap:24px;
-    margin-top:10px;
+  .nav a.active {
+    background: var(--brand-gradient);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(183, 28, 28, 0.3);
   }
 
-  .panel{
-    border-radius:14px;
-    border:1px solid var(--border);
-    background:#fff;
-    padding:18px 18px 16px;
+  .nav-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: var(--surface-elevated);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
   }
 
-  .panel-title{
-    font-size:14px;
-    font-weight:700;
-    margin:0 0 12px;
-    color:var(--text);
+  .nav a.active .nav-icon { background: rgba(255,255,255,0.2); }
+  .spacer { flex: 1; }
+
+  .profile-mini {
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    gap: 12px;
   }
 
-  .form-field{margin-bottom:14px;}
-
-  .field-label{
-    display:block;
-    font-size:12px;
-    font-weight:600;
-    color:var(--muted);
-    margin-bottom:5px;
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--brand-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
   }
 
-  .field-input{
-    width:100%;
-    padding:9px 11px;
-    border-radius:8px;
-    border:1px solid var(--border);
-    font-size:14px;
-    color:var(--text);
-    background:#f8f9fa;
-    font-family:inherit;
+  .profile-mini .nm { font-weight: 600; font-size: 13px; color: var(--text); }
+  .profile-mini .em { font-size: 11px; color: var(--muted); }
+
+  /* Main Content */
+  .profile-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
   }
 
-  .field-input:focus{
-    outline:none;
-    border-color:var(--brand-red);
-    background:#fff;
+  /* Alert Messages */
+  .alert-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
   }
 
-  .field-input[readonly]{
-    background:#f3f4f6;
-    color:#6b7280;
+  .alert-msg {
+    padding: 14px 18px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    border: 1px solid transparent;
+    display: flex;
+    align-items: center;
+    gap: 10px;
   }
 
-  .btn-row{
-    display:flex;
-    justify-content:flex-end;
-    gap:8px;
-    margin-top:8px;
+  .alert-msg.success { background: #ecfdf5; border-color: #bbf7d0; color: #166534; }
+  .alert-msg.error, .alert-msg.danger { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+
+  /* Profile Card */
+  .profile-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
   }
 
-  .btn-primary{
-    padding:9px 16px;
-    border-radius:8px;
-    border:none;
-    font-size:13px;
-    font-weight:700;
-    cursor:pointer;
-    background:linear-gradient(135deg,var(--brand-red) 0%,var(--brand-orange) 100%);
-    color:#fff;
-    transition:.2s;
+  .profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-light);
   }
 
-  .btn-primary:hover{
-    filter:brightness(1.08);
-    transform:translateY(-1px);
+  .profile-title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text);
   }
 
-  .btn-ghost{
-    padding:8px 14px;
-    border-radius:8px;
-    border:1px solid var(--border);
-    background:#fff;
-    font-size:13px;
-    font-weight:600;
-    color:var(--muted);
-    cursor:pointer;
-    transition:.2s;
+  .profile-sub {
+    font-size: 14px;
+    color: var(--muted);
+    margin-top: 6px;
   }
 
-  .btn-ghost:hover{
-    border-color:var(--brand-red);
-    color:var(--brand-red);
+  .badge-role {
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #fef2f2;
+    color: var(--brand-red);
+    border: 1px solid #fecaca;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 
-  .alert-stack{
-    margin-bottom:14px;
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-  }
-  .alert-msg{
-    padding:10px 12px;
-    border-radius:10px;
-    font-size:12px;
-    font-weight:600;
-    border:1px solid transparent;
-  }
-  .alert-msg.success{
-    background:#ecfdf3;
-    border-color:#bbf7d0;
-    color:#166534;
-  }
-  .alert-msg.error,
-  .alert-msg.danger{
-    background:#fef2f2;
-    border-color:#fecaca;
-    color:#991b1b;
+  .profile-grid {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 24px;
   }
 
-  @media (max-width:1024px){
-    .layout{grid-template-columns:1fr;}
+  /* Panel */
+  .panel {
+    background: var(--surface-elevated);
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    padding: 24px;
   }
-  @media (max-width:768px){
-    .profile-grid{grid-template-columns:1fr;}
+
+  .panel-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 0 20px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .panel-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+
+  /* Form */
+  .form-field { margin-bottom: 18px; }
+
+  .field-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .field-input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--surface);
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+
+  .field-input:focus {
+    outline: none;
+    border-color: var(--brand-red);
+    box-shadow: 0 0 0 3px rgba(183, 28, 28, 0.1);
+  }
+
+  .field-input[readonly] {
+    background: var(--border-light);
+    color: var(--muted);
+  }
+
+  .btn-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 8px;
+  }
+
+  .btn-primary {
+    padding: 12px 24px;
+    border-radius: 10px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--brand-gradient);
+    color: #fff;
+    transition: all 0.2s;
+    font-family: inherit;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 8px rgba(183, 28, 28, 0.25);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(183, 28, 28, 0.35);
+  }
+
+  .password-section p {
+    font-size: 14px;
+    color: var(--muted);
+    margin: 0 0 20px;
+    line-height: 1.6;
+  }
+
+  /* Responsive */
+  @media (max-width: 1024px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { position: relative; top: 0; }
+  }
+
+  @media (max-width: 768px) {
+    .profile-grid { grid-template-columns: 1fr; }
   }
 </style>
 
 <div class="layout">
-  <!-- Sidebar nav -->
+  <!-- Sidebar -->
   <aside class="sidebar">
     <div class="brand">
       <div class="dots-container">
@@ -253,38 +361,41 @@
         <span class="dot yellow"></span>
         <span class="dot green"></span>
       </div>
-      <div class="txt">
+      <div>
         <div class="park-brand">
           <span class="p1">Park</span><span class="p2">IT!</span>
         </div>
-        <div class="t2">Online</div>
+        <div class="brand-subtitle">User Portal</div>
       </div>
     </div>
 
     <nav class="nav">
       <a href="{% url 'user_dashboard' %}">
-        <span class="ico">▦</span><span>Dashboard</span>
+        <span class="nav-icon">🏠</span>
+        <span>Dashboard</span>
       </a>
       <a href="{% url 'user_parking_spaces' %}">
-        <span class="ico">🅿</span><span>Parking Spaces</span>
+        <span class="nav-icon">🅿️</span>
+        <span>Parking Spaces</span>
       </a>
       <a class="active" href="{% url 'user_profile' %}">
-        <span class="ico">👤</span><span>Profile</span>
+        <span class="nav-icon">👤</span>
+        <span>Profile</span>
       </a>
     </nav>
 
     <div class="spacer"></div>
 
     <div class="profile-mini">
-      <div class="avatar"></div>
+      <div class="avatar">{{ full_name|slice:":1"|upper|default:"U" }}</div>
       <div>
-        <div class="nm">{{ full_name|default:"User Name" }}</div>
-        <div class="em">{{ email|default:"user email" }}</div>
+        <div class="nm">{{ full_name|default:"User" }}</div>
+        <div class="em">{{ email|default:"user@parkit.com" }}</div>
       </div>
     </div>
   </aside>
 
-  <!-- Main profile content -->
+  <!-- Main Content -->
   <div class="profile-wrap">
     {% if messages %}
     <div class="alert-stack">
@@ -298,51 +409,50 @@
       <div class="profile-header">
         <div>
           <h2 class="profile-title">My Profile</h2>
-          <div class="profile-sub">
-            View and update your account details.
-          </div>
+          <p class="profile-sub">View and update your account details.</p>
         </div>
-        <div class="badge-role">
-          {{ role|default:"User"|title }}
-        </div>
+        <div class="badge-role">{{ role|default:"User" }}</div>
       </div>
 
       <div class="profile-grid">
-        <!-- Left: basic info -->
+        <!-- Account Information -->
         <div class="panel">
-          <h3 class="panel-title">Account Information</h3>
+          <h3 class="panel-title">
+            <span class="panel-icon">👤</span>
+            Account Information
+          </h3>
           <form method="post" action="{% url 'update_profile' %}">
             {% csrf_token %}
             <div class="form-field">
               <label class="field-label">Full Name</label>
-              <input type="text" class="field-input" name="full_name"
-                     value="{{ full_name|default:'' }}" required>
+              <input type="text" class="field-input" name="full_name" value="{{ full_name|default:'' }}" required>
             </div>
             <div class="form-field">
               <label class="field-label">Username / ID</label>
-              <input type="text" class="field-input" name="username"
-                     value="{{ username|default:'' }}" readonly>
+              <input type="text" class="field-input" name="username" value="{{ username|default:'' }}" readonly>
             </div>
             <div class="form-field">
               <label class="field-label">Email</label>
-              <input type="email" class="field-input" name="email"
-                     value="{{ email|default:'' }}" readonly>
+              <input type="email" class="field-input" name="email" value="{{ email|default:'' }}" readonly>
             </div>
             <div class="btn-row">
-              <button type="submit" class="btn-primary">Save changes</button>
+              <button type="submit" class="btn-primary">💾 Save Changes</button>
             </div>
           </form>
         </div>
 
-        <!-- Right: change password -->
+        <!-- Change Password -->
         <div class="panel">
-          <h3 class="panel-title">Change Password</h3>
-          <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">
-            Update your account password to keep your account secure.
-          </p>
-          <a href="{% url 'change_password' %}" class="btn-primary" style="text-decoration:none;display:inline-block;">
-            Change Password
-          </a>
+          <h3 class="panel-title">
+            <span class="panel-icon">🔑</span>
+            Security
+          </h3>
+          <div class="password-section">
+            <p>Update your password regularly to keep your account secure. Choose a strong password that you don't use elsewhere.</p>
+            <a href="{% url 'change_password' %}" class="btn-primary">
+              🔐 Change Password
+            </a>
+          </div>
         </div>
       </div>
     </div>

@@ -5,141 +5,431 @@
 
 {% block content %}
 <style>
-  :root{
-    --brand-red:#b71c1c;
-    --brand-orange:#f57c00;
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
-    --win-red:#ff5f57;
-    --win-yellow:#ffbd2e;
-    --win-green:#28c840;
-
-    --bar-red:#e53935;
-    --bar-yellow:#ffb400;
-    --bar-green:#2fbf4a;
-
-    --surface:#ffffff;
-    --border:#eef0f3;
-    --text:#111827;
-    --muted:#6b7280;
-    --canvas-bg:#f5f7fa;
+  :root {
+    --brand-red: #b71c1c;
+    --brand-orange: #f57c00;
+    --brand-gradient: linear-gradient(135deg, #b71c1c 0%, #f57c00 100%);
+    
+    --win-red: #ff5f57;
+    --win-yellow: #ffbd2e;
+    --win-green: #28c840;
+    
+    --bar-red: #e53935;
+    --bar-yellow: #ffb400;
+    --bar-green: #10b981;
+    
+    --surface: #ffffff;
+    --surface-elevated: #fafbfc;
+    --border: #e5e7eb;
+    --border-light: #f3f4f6;
+    --text: #111827;
+    --text-secondary: #4b5563;
+    --muted: #6b7280;
+    --canvas-bg: #f8fafc;
   }
 
-  body{ background:var(--canvas-bg); }
+  * { box-sizing: border-box; }
 
-  /* Wide canvas */
-  .dashboard-wrap{
-    width:100%;
-    max-width: 1520px;
-    margin:0 auto;
-    padding:18px 18px 26px;
+  body { 
+    background: var(--canvas-bg); 
+    font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+    margin: 0;
   }
 
-  /* Grid app layout */
-  .app{
-    display:grid;
-    grid-template-columns: 270px 1fr;
-    gap:14px;
+  .dashboard-wrap {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .app {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 20px;
     min-height: calc(100vh - 80px);
   }
 
   /* Sidebar */
-  .sidebar{
-    background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;
-    display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);
-  }
-
-  /* Brand section with dots and ParkIT! */
-  .brand{
-    padding-bottom:10px;border-bottom:1px solid var(--border);
+  .sidebar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    height: fit-content;
+    position: sticky;
+    top: 20px;
   }
 
-  /* Three dots - horizontal */
-  .dots-container{
-    display:flex;
-    gap:6px;
-    align-items:center;
+  .brand {
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
   }
-  .dot{width:10px;height:10px;border-radius:50%}
-  .dot.red{background:var(--win-red)}
-  .dot.yellow{background:var(--win-yellow)}
-  .dot.green{background:var(--win-green)}
 
-  /* ParkIT! branding */
-  .txt{line-height:1.1;}
-  .park-brand{
-    font-family: Montserrat, sans-serif;
-    font-weight:800;
-    letter-spacing:.2px;
-    font-size:17px;
-    line-height:1;
-  }
-  .park-brand .p1{ color:var(--brand-red); }
-  .park-brand .p2{ color:#ffb400; }
-  .txt .t2{font-weight:600;color:var(--muted);font-size:11px; margin-top:2px;}
+  .dots-container { display: flex; gap: 6px; align-items: center; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; transition: transform 0.2s; }
+  .dot:hover { transform: scale(1.2); }
+  .dot.red { background: var(--win-red); }
+  .dot.yellow { background: var(--win-yellow); }
+  .dot.green { background: var(--win-green); }
 
-  .nav{display:flex;flex-direction:column;gap:10px;margin-top:8px}
-  .nav a{
-    display:flex;align-items:center;gap:10px;text-decoration:none;
-    padding:11px 12px;border-radius:12px;border:1px solid var(--border);
-    color:var(--text); background:#fff; transition:.2s;
+  .park-brand {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    font-size: 22px;
+    line-height: 1;
   }
-  .nav a:hover{transform:translateY(-1px); border-color:var(--brand-red); color:var(--brand-red)}
-  .nav a.active{
-    background: linear-gradient(135deg,var(--brand-red) 0%, var(--brand-orange) 100%);
-    color:#fff; border-color:transparent;
+  .park-brand .p1 { color: var(--brand-red); }
+  .park-brand .p2 { color: #ffb400; }
+  .brand-subtitle { 
+    font-weight: 500; 
+    color: var(--muted); 
+    font-size: 12px; 
+    text-transform: uppercase;
+    letter-spacing: 1px;
   }
-  .ico{
-    width:28px;height:28px;border-radius:8px;background:#f8f9fa;
-    display:flex;align-items:center;justify-content:center;color:#6b7280;font-weight:700;
-  }
-  .spacer{flex:1}
 
-  /* Profile section */
-  .profile{
-    padding:12px;border:1px solid var(--border);border-radius:12px;background:#fff;
-    display:flex;align-items:center;gap:10px;
-    cursor:pointer;
+  .nav { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+
+  .nav a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    color: var(--text);
+    background: var(--surface);
+    transition: all 0.2s ease;
+    font-weight: 500;
+    font-size: 14px;
+  }
+
+  .nav a:hover {
+    background: var(--surface-elevated);
+    border-color: var(--border);
+    transform: translateX(4px);
+  }
+
+  .nav a.active {
+    background: var(--brand-gradient);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(183, 28, 28, 0.3);
+  }
+
+  .nav-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: var(--surface-elevated);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+
+  .nav a.active .nav-icon { background: rgba(255,255,255,0.2); }
+  .spacer { flex: 1; }
+
+  .profile {
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
     transition: all 0.2s;
   }
-  .profile:hover{
-    border-color:var(--brand-red);
-    background:#fff5f5;
-  }
-  .avatar{width:30px;height:30px;border-radius:50%;background:#f3f4f6}
-  .nm{font-weight:600;font-size:12px;color:var(--text)}
-  .em{font-size:11px;color:var(--muted)}
 
-  /* Modal overlay */
-  .modal-overlay{
+  .profile:hover { border-color: var(--brand-red); background: #fff5f5; }
+
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--brand-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  .profile-info .nm { font-weight: 600; font-size: 13px; color: var(--text); }
+  .profile-info .em { font-size: 11px; color: var(--muted); }
+
+  /* Main Content */
+  .main {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* Welcome Card */
+  .welcome-card {
+    background: var(--brand-gradient);
+    border-radius: 16px;
+    padding: 28px;
+    color: white;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .welcome-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 300px;
+    height: 300px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+  }
+
+  .welcome-card h1 {
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0 0 8px;
+    position: relative;
+  }
+
+  .welcome-card p {
+    font-size: 14px;
+    opacity: 0.9;
+    margin: 0;
+    position: relative;
+  }
+
+  /* Stats Grid */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    transition: all 0.3s ease;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+  }
+
+  .stat-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+
+  .card h4 {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0 0 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .card-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--surface-elevated);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+
+  /* Lot Status */
+  .lot-status {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .lot-row {
+    display: grid;
+    grid-template-columns: 60px 1fr 50px;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .lot-name {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .lot-bar {
+    height: 8px;
+    border-radius: 999px;
+    background: var(--border-light);
+    overflow: hidden;
+  }
+
+  .lot-bar .seg {
+    display: block;
+    height: 100%;
+    float: left;
+    transition: width 0.5s ease;
+  }
+  .lot-bar .seg.red { background: var(--bar-red); }
+  .lot-bar .seg.yellow { background: var(--bar-yellow); }
+  .lot-bar .seg.green { background: var(--bar-green); }
+
+  .lot-percent {
+    font-weight: 700;
+    font-size: 13px;
+    text-align: right;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Button */
+  .btn-primary {
+    padding: 12px 24px;
+    border-radius: 10px;
+    border: none;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    background: var(--brand-gradient);
+    color: #fff;
+    transition: all 0.2s;
+    font-family: inherit;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 8px rgba(183, 28, 28, 0.25);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(183, 28, 28, 0.35);
+  }
+
+  /* Tips */
+  .tips-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .tips-list li {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-light);
+    font-size: 14px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .tips-list li:last-child {
+    border-bottom: none;
+  }
+
+  .tip-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: var(--surface-elevated);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+
+  /* Grid Layout */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+  }
+
+  /* Empty State */
+  .empty-state {
+    text-align: center;
+    padding: 32px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  /* Modal */
+  .modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
     display: none;
     align-items: center;
     justify-content: center;
     z-index: 1000;
   }
-  .modal-overlay.show{
-    display: flex;
-  }
+  .modal-overlay.show { display: flex; }
 
-  /* Account Modal */
-  .account-modal{
+  .account-modal {
     background: #fff;
-    border-radius: 12px;
+    border-radius: 16px;
     width: 90%;
     max-width: 420px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-    position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    animation: modalIn 0.3s ease;
   }
 
-  .modal-header{
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .modal-header {
     padding: 20px 24px;
     border-bottom: 1px solid var(--border);
     display: flex;
@@ -147,136 +437,79 @@
     justify-content: space-between;
   }
 
-  .modal-title{
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--text);
-    margin: 0;
-  }
+  .modal-title { font-size: 18px; font-weight: 700; color: var(--text); margin: 0; }
 
-  .close-btn{
-    width: 28px;
-    height: 28px;
+  .close-btn {
+    width: 32px;
+    height: 32px;
     border: none;
-    background: transparent;
+    background: var(--surface-elevated);
     color: var(--muted);
     font-size: 20px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 6px;
+    border-radius: 8px;
     transition: all 0.2s;
   }
 
-  .close-btn:hover{
-    background: var(--border);
-    color: var(--text);
-  }
+  .close-btn:hover { background: #fee2e2; color: var(--brand-red); }
 
-  .modal-body{
-    padding: 24px;
-  }
+  .modal-body { padding: 24px; }
+  .form-field { margin-bottom: 20px; }
+  .form-field:last-child { margin-bottom: 0; }
 
-  .form-field{
-    margin-bottom: 20px;
-  }
-
-  .form-field:last-child{
-    margin-bottom: 0;
-  }
-
-  .field-label{
+  .field-label {
     display: block;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
-    color: var(--text);
+    color: var(--text-secondary);
     margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 
-  .field-input{
+  .field-input {
     width: 100%;
-    padding: 10px 12px;
+    padding: 12px 14px;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 14px;
     color: var(--text);
-    background: #f8f9fa;
+    background: var(--surface-elevated);
     font-family: inherit;
   }
 
-  .field-input:focus{
-    outline: none;
-    border-color: var(--brand-red);
-    background: #fff;
-  }
-
-  .modal-footer{
+  .modal-footer {
     padding: 16px 24px;
     border-top: 1px solid var(--border);
     display: flex;
     justify-content: flex-end;
   }
 
-  .logout-btn-modal{
-    padding: 10px 20px;
+  .logout-btn-modal {
+    padding: 12px 24px;
     border: none;
-    border-radius: 8px;
-    font-weight: 700;
+    border-radius: 10px;
+    font-weight: 600;
     font-size: 14px;
     cursor: pointer;
-    background: linear-gradient(135deg,var(--brand-red) 0%, var(--brand-orange) 100%);
+    background: var(--brand-gradient);
     color: #fff;
     transition: all 0.2s;
+    font-family: inherit;
   }
 
-  .logout-btn-modal:hover{
-    filter: brightness(1.1);
-    transform: translateY(-1px);
+  .logout-btn-modal:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(183, 28, 28, 0.3);
   }
 
-  /* Main canvas */
-  .main{
-    background:#fff;border:1px solid var(--border);border-radius:12px;
-    box-shadow:0 1px 2px rgba(0,0,0,.04); padding:14px;
-  }
-
-  /* Cards and grids */
-  .grid-3{display:grid;grid-template-columns: 1.2fr 1fr 1fr; gap:14px}
-  .card{
-    background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;
-    box-shadow:0 1px 1px rgba(0,0,0,.02);
-  }
-  .card h4{margin:0 0 8px;font-size:14px;font-weight:700;color:var(--text)}
-  .sub{color:var(--muted);font-size:12px;margin-bottom:6px}
-  .metric .big{font-size:64px;font-weight:800;color:var(--text);line-height:1}
-
-  .status-row{display:grid;grid-template-columns: 42px 1fr 48px; align-items:center; gap:8px; margin:8px 0;}
-  .lot-name{font-weight:600;color:var(--text);font-size:12px}
-  .percent{font-weight:700;color:var(--muted);font-size:12px;text-align:right}
-  .bar{height:10px;border-radius:999px;background:#f1f2f4;overflow:hidden}
-  .seg{display:block;height:100%;float:left}
-  .seg.red{background:var(--bar-red)}
-  .seg.yellow{background:var(--bar-yellow)}
-  .seg.green{background:var(--bar-green)}
-
-  .grid-lower{display:grid;grid-template-columns: 1.05fr 1.5fr; gap:14px; margin-top:14px}
-  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
-  .btn{height:36px;padding:0 14px;border-radius:10px;border:1px solid var(--border);background:#fff;color:var(--text);font-weight:700;cursor:pointer}
-  .btn.primary{background: linear-gradient(135deg,var(--brand-red) 0%, var(--brand-orange) 100%); color:#fff;border-color:transparent}
-
-  table{width:100%;border-collapse:collapse;font-size:13px}
-  th,td{padding:8px 6px;border-bottom:1px solid var(--border);text-align:left;color:var(--text)}
-  th{font-weight:700}
-
-  @media (max-width: 1280px){
-    .dashboard-wrap{max-width: 1240px;}
-    .grid-3{grid-template-columns: 1fr 1fr;}
-  }
-  @media (max-width: 1024px){
-    .app{grid-template-columns: 1fr;}
-    .grid-3{grid-template-columns: 1fr;}
-    .grid-lower{grid-template-columns: 1fr;}
+  /* Responsive */
+  @media (max-width: 1024px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { position: relative; top: 0; }
   }
 </style>
 
@@ -290,110 +523,120 @@
           <span class="dot yellow"></span>
           <span class="dot green"></span>
         </div>
-        <div class="txt">
+        <div>
           <div class="park-brand">
             <span class="p1">Park</span><span class="p2">IT!</span>
           </div>
-          <div class="t2">Online</div>
+          <div class="brand-subtitle">User Portal</div>
         </div>
       </div>
 
- <nav class="nav">
-  <a class="active" href="{% url 'user_dashboard' %}">
-    <span class="ico"></span>
-    <span>Dashboard</span>
-  </a>
-  <a href="{% url 'user_parking_spaces' %}">
-    <span class="ico"></span>
-    <span>Parking Spaces</span>
-  </a>
-  <a href="{% url 'profile_for_users' %}">
-    <span class="ico"></span>
-    <span>Profile</span>
-  </a>
-</nav>
+      <nav class="nav">
+        <a class="active" href="{% url 'user_dashboard' %}">
+          <span class="nav-icon">🏠</span>
+          <span>Dashboard</span>
+        </a>
+        <a href="{% url 'user_parking_spaces' %}">
+          <span class="nav-icon">🅿️</span>
+          <span>Parking Spaces</span>
+        </a>
+        <a href="{% url 'profile_for_users' %}">
+          <span class="nav-icon">👤</span>
+          <span>Profile</span>
+        </a>
+      </nav>
 
       <div class="spacer"></div>
 
       <div class="profile" id="profileTrigger">
-        <div class="avatar"></div>
-        <div>
-          <div class="nm">{{ full_name|default:"User Name" }}</div>
-          <div class="em">{{ email|default:"user email" }}</div>
+        <div class="avatar">{{ full_name|slice:":1"|upper|default:"U" }}</div>
+        <div class="profile-info">
+          <div class="nm">{{ full_name|default:"User" }}</div>
+          <div class="em">{{ email|default:"user@parkit.com" }}</div>
         </div>
       </div>
     </aside>
 
-    <section class="main">
-      <div class="grid-3">
-        <div class="card metric">
-          <h4>Today&apos;s Summary</h4>
-          <div class="sub">{{ summary_date }}</div>
-          <div class="big" style="font-size:38px;">{{ overall_occupancy_pct }}%</div>
-          <p class="sub">Overall campus occupancy</p>
+    <!-- Main Content -->
+    <main class="main">
+      <!-- Welcome Card -->
+      <div class="welcome-card">
+        <h1>Welcome back, {{ full_name|default:"User" }}! 👋</h1>
+        <p>Here's your parking overview for today, {{ summary_date }}.</p>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Campus Occupancy</div>
+          <div class="stat-value">{{ overall_occupancy_pct }}%</div>
         </div>
 
-        <div class="card">
-          <h4>Your Account</h4>
-          <div class="sub">Logged in as</div>
-          <p class="nm" style="font-size:15px;">{{ full_name }}</p>
-          <p class="em">{{ email }}</p>
-          <button class="btn primary" style="margin-top:10px;" onclick="window.location='{% url 'user_parking_spaces' %}'">
-            View Parking Map
-          </button>
-        </div>
-
-        <div class="card">
-          <h4>Recommended Lot</h4>
-          {% if recommended_lot %}
-            <p class="lot-name" style="font-size:14px;">{{ recommended_lot.name }}</p>
-            <div class="bar" style="margin:10px 0;">
-              <span class="seg red" style="width:{{ recommended_lot.segment_red }}%"></span>
-              <span class="seg yellow" style="width:{{ recommended_lot.segment_yellow }}%"></span>
-              <span class="seg green" style="width:{{ recommended_lot.segment_green }}%"></span>
-            </div>
-            <p class="percent">{{ recommended_lot.occupancy_percent }}% full</p>
-            <p class="sub">Best chance for quick parking right now.</p>
-          {% else %}
-            <p class="sub">Parking data is not available yet.</p>
-          {% endif %}
+        <div class="stat-card">
+          <div class="stat-label">Recommended Lot</div>
+          <div class="stat-value" style="font-size: 24px;">
+            {% if recommended_lot %}{{ recommended_lot.name }}{% else %}—{% endif %}
+          </div>
         </div>
       </div>
 
-      <div class="grid-lower">
+      <!-- Grid Layout -->
+      <div class="grid-2">
+        <!-- Lot Occupancy Card -->
         <div class="card">
-          <h4>Lot Occupancy</h4>
+          <h4><span class="card-icon">🏢</span> Lot Occupancy</h4>
           {% if lot_status %}
+          <div class="lot-status">
             {% for lot in lot_status %}
-            <div class="status-row">
+            <div class="lot-row">
               <div class="lot-name">{{ lot.code }}</div>
-              <div class="bar">
+              <div class="lot-bar">
                 <span class="seg red" style="width:{{ lot.segment_red }}%"></span>
                 <span class="seg yellow" style="width:{{ lot.segment_yellow }}%"></span>
                 <span class="seg green" style="width:{{ lot.segment_green }}%"></span>
               </div>
-              <div class="percent">{{ lot.occupancy_percent }}%</div>
+              <div class="lot-percent">{{ lot.occupancy_percent }}%</div>
             </div>
             {% endfor %}
+          </div>
           {% else %}
-            <div class="empty-state">Parking information is not available yet.</div>
+          <div class="empty-state">No parking data available.</div>
           {% endif %}
+          <div style="margin-top: 20px;">
+            <a href="{% url 'user_parking_spaces' %}" class="btn-primary">
+              🅿️ View Parking Map
+            </a>
+          </div>
         </div>
 
+        <!-- Tips Card -->
         <div class="card">
-          <h4>Tips</h4>
-          <ul style="margin-left:18px;font-size:13px;color:var(--muted);line-height:1.6;">
-            <li>Check the parking map before heading out.</li>
-            <li>Lots under 80% occupancy usually have open slots.</li>
-            <li>Arrive 10 minutes earlier during peak hours.</li>
-            <li>Need help? Contact the parking office through the admin portal.</li>
+          <h4><span class="card-icon">💡</span> Parking Tips</h4>
+          <ul class="tips-list">
+            <li>
+              <span class="tip-icon">📱</span>
+              Check the parking map before heading out.
+            </li>
+            <li>
+              <span class="tip-icon">📊</span>
+              Lots under 80% occupancy usually have open slots.
+            </li>
+            <li>
+              <span class="tip-icon">⏰</span>
+              Arrive 10 minutes earlier during peak hours.
+            </li>
+            <li>
+              <span class="tip-icon">📞</span>
+              Need help? Contact the parking office.
+            </li>
           </ul>
         </div>
       </div>
-    </section>
+    </main>
   </div>
 </div>
 
+<!-- Account Modal -->
 <div class="modal-overlay" id="accountModal">
   <div class="account-modal">
     <div class="modal-header">
@@ -403,19 +646,15 @@
     <div class="modal-body">
       <div class="form-field">
         <label class="field-label">Full Name</label>
-        <input type="text" class="field-input" value="{{ full_name|default:'User Name' }}" readonly>
+        <input type="text" class="field-input" value="{{ full_name|default:'User' }}" readonly>
       </div>
       <div class="form-field">
         <label class="field-label">Username</label>
-        <input type="text" class="field-input" value="{{ username|default:'username' }}" readonly>
+        <input type="text" class="field-input" value="{{ username|default:'user' }}" readonly>
       </div>
       <div class="form-field">
         <label class="field-label">Email</label>
-        <input type="email" class="field-input" value="{{ email|default:'user@email.com' }}" readonly>
-      </div>
-      <div class="form-field">
-        <label class="field-label">Password</label>
-        <input type="password" class="field-input" value="********" readonly>
+        <input type="email" class="field-input" value="{{ email|default:'user@parkit.com' }}" readonly>
       </div>
     </div>
     <div class="modal-footer">
@@ -428,26 +667,14 @@
 </div>
 
 <script>
-  // Get modal elements
   const profileTrigger = document.getElementById('profileTrigger');
   const accountModal = document.getElementById('accountModal');
   const closeModal = document.getElementById('closeModal');
 
-  // Open modal when clicking profile
-  profileTrigger.addEventListener('click', function() {
-    accountModal.classList.add('show');
-  });
-
-  // Close modal when clicking X button
-  closeModal.addEventListener('click', function() {
-    accountModal.classList.remove('show');
-  });
-
-  // Close modal when clicking outside
-  accountModal.addEventListener('click', function(e) {
-    if (e.target === accountModal) {
-      accountModal.classList.remove('show');
-    }
+  profileTrigger.addEventListener('click', () => accountModal.classList.add('show'));
+  closeModal.addEventListener('click', () => accountModal.classList.remove('show'));
+  accountModal.addEventListener('click', (e) => {
+    if (e.target === accountModal) accountModal.classList.remove('show');
   });
 </script>
 {% endblock %}

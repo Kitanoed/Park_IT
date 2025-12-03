@@ -2,16 +2,253 @@
 {% load static %}
 {% load crispy_forms_tags %}
 
-{% block extra_head %}
-<style>
-  .auth-note { text-align:center; color:#6b7280; margin: 10px 0 0; font-size: 14px; }
-  .auth-note a { color:#b71c1c; text-decoration:none; font-weight:600; }
-  .grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  @media (max-width:640px) { .grid-2 { grid-template-columns: 1fr; } }
-</style>
-{% endblock %}
-
 {% block content %}
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+  :root {
+    --brand-red: #b71c1c;
+    --brand-orange: #f57c00;
+    --brand-gradient: linear-gradient(135deg, #b71c1c 0%, #f57c00 100%);
+    --text: #111827;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --surface: #ffffff;
+  }
+
+  body {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%);
+    font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+    min-height: 100vh;
+    margin: 0;
+  }
+
+  .container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: calc(100vh - 80px);
+    padding: 40px 20px;
+  }
+
+  .login-card {
+    max-width: 520px;
+    width: 100%;
+    padding: 40px;
+    border-radius: 24px;
+    background: var(--surface);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.05);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .login-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--brand-gradient);
+  }
+
+  .logo-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo-header img {
+    width: 56px;
+    height: 56px;
+    object-fit: contain;
+  }
+
+  .logo-header-text .university-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0;
+  }
+
+  .logo-header-text .online-badge {
+    color: var(--brand-red);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .welcome-title {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--text);
+    letter-spacing: -0.5px;
+  }
+
+  .welcome-subtitle {
+    color: var(--muted);
+    font-size: 15px;
+    margin-bottom: 32px;
+    line-height: 1.5;
+  }
+
+  /* Form Styling */
+  form {
+    margin-bottom: 24px;
+  }
+
+  /* Grid for name fields */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  @media (max-width: 480px) {
+    .grid-2 {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .btn-signin {
+    width: 100%;
+    padding: 16px 24px;
+    background: var(--brand-gradient);
+    color: white;
+    font-weight: 700;
+    font-size: 15px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    box-shadow: 0 4px 15px rgba(183, 28, 28, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .btn-signin:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(183, 28, 28, 0.4);
+  }
+
+  .btn-signin:active {
+    transform: translateY(0);
+  }
+
+  .auth-note {
+    text-align: center;
+    color: var(--muted);
+    font-size: 14px;
+    margin: 0;
+  }
+
+  .auth-note a {
+    color: var(--brand-red);
+    text-decoration: none;
+    font-weight: 600;
+    transition: opacity 0.2s;
+  }
+
+  .auth-note a:hover {
+    opacity: 0.8;
+  }
+
+  /* Django Messages */
+  .messagelist {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 24px;
+  }
+
+  .messagelist li {
+    padding: 14px 18px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .messagelist .error, .messagelist .danger {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+  }
+
+  .messagelist .success {
+    background: #ecfdf5;
+    border: 1px solid #bbf7d0;
+    color: #166534;
+  }
+
+  /* Crispy Forms Override */
+  .asteriskField {
+    display: none;
+  }
+
+  div[id^="div_id_"] {
+    margin-bottom: 20px;
+  }
+
+  div[id^="div_id_"] label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  input.form-control, select.form-control {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 15px;
+    color: var(--text);
+    background: #fafbfc;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+
+  input.form-control:focus, select.form-control:focus {
+    outline: none;
+    border-color: var(--brand-red);
+    background: var(--surface);
+    box-shadow: 0 0 0 4px rgba(183, 28, 28, 0.1);
+  }
+
+  .invalid-feedback, .errorlist {
+    color: #dc2626;
+    font-size: 13px;
+    margin-top: 6px;
+    list-style: none;
+    padding: 0;
+  }
+
+  #hint_id_password1, #hint_id_password2 {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+
+  @media (max-width: 576px) {
+    .login-card {
+      padding: 32px 24px;
+    }
+
+    .welcome-title {
+      font-size: 24px;
+    }
+  }
+</style>
+
 <div class="container">
   <div class="login-card">
     <div class="logo-header">
@@ -23,14 +260,22 @@
     </div>
 
     <div class="text-center">
-      <h3 class="welcome-title">Welcome to <span style="color:#b71c1c;">Park</span><span style="color:#ffb400;">IT!</span></h3>
-      <p class="welcome-subtitle">Create your ParkIT account below to get started.</p>
+      <h3 class="welcome-title">Welcome to <span style="color:var(--brand-red);">Park</span><span style="color:#ffb400;">IT!</span></h3>
+      <p class="welcome-subtitle">Create your account to get started</p>
     </div>
+
+    {% if messages %}
+    <ul class="messagelist">
+      {% for message in messages %}
+      <li class="{{ message.tags }}">{{ message }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
 
     <form method="POST" action="{% url 'register' %}" novalidate>
       {% csrf_token %}
       {{ form|crispy }}
-      <button type="submit" class="btn btn-signin w-100">Create Account</button>
+      <button type="submit" class="btn btn-signin">Create Account</button>
     </form>
 
     <p class="auth-note">Already have an account? <a href="{% url 'login' %}">Sign in</a></p>

@@ -1,277 +1,436 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Admin - Manage Slots{% endblock %}
+{% block title %}Admin - Parking Spaces{% endblock %}
 
 {% block content %}
 <style>
-  :root{
-    --brand-red:#b71c1c;
-    --brand-orange:#f57c00;
-    --win-red:#ff5f57;
-    --win-yellow:#ffbd2e;
-    --win-green:#28c840;
-    --bar-red:#e53935;
-    --bar-yellow:#ffb400;
-    --bar-green:#2fbf4a;
-    --surface:#ffffff;
-    --border:#eef0f3;
-    --text:#111827;
-    --muted:#6b7280;
-    --canvas-bg:#f5f7fa;
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+  :root {
+    --brand-red: #b71c1c;
+    --brand-orange: #f57c00;
+    --brand-gradient: linear-gradient(135deg, #b71c1c 0%, #f57c00 100%);
+    
+    --win-red: #ff5f57;
+    --win-yellow: #ffbd2e;
+    --win-green: #28c840;
+    
+    --surface: #ffffff;
+    --surface-elevated: #fafbfc;
+    --border: #e5e7eb;
+    --border-light: #f3f4f6;
+    --text: #111827;
+    --text-secondary: #4b5563;
+    --muted: #6b7280;
+    --canvas-bg: #f8fafc;
   }
 
-  body{ background:var(--canvas-bg); }
+  * { box-sizing: border-box; }
 
-  .dashboard-wrap{
-    width:100%;
-    max-width: 1520px;
-    margin:0 auto;
-    padding:18px 18px 26px;
+  body { 
+    background: var(--canvas-bg); 
+    font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+    margin: 0;
   }
 
-  .app{
-    display:grid;
-    grid-template-columns: 270px 1fr;
-    gap:14px;
+  .dashboard-wrap {
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .app {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 20px;
     min-height: calc(100vh - 80px);
   }
 
-  .sidebar{
-    background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;
-    display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);
+  /* Sidebar */
+  .sidebar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    height: fit-content;
+    position: sticky;
+    top: 20px;
   }
 
-  .brand{
-    padding-bottom:10px;border-bottom:1px solid var(--border);
-    display: flex;flex-direction: column;gap: 8px;
+  .brand {
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
   }
 
-  .dots-container{display:flex;gap:6px;align-items:center;}
-  .dot{width:10px;height:10px;border-radius:50%}
-  .dot.red{background:var(--win-red)}
-  .dot.yellow{background:var(--win-yellow)}
-  .dot.green{background:var(--win-green)}
+  .dots-container { display: flex; gap: 6px; align-items: center; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; transition: transform 0.2s; }
+  .dot:hover { transform: scale(1.2); }
+  .dot.red { background: var(--win-red); }
+  .dot.yellow { background: var(--win-yellow); }
+  .dot.green { background: var(--win-green); }
 
-  .txt{line-height:1.1;}
-  .park-brand{
-    font-family: Montserrat, sans-serif;
-    font-weight:800;letter-spacing:.2px;font-size:17px;line-height:1;
+  .park-brand {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    font-size: 22px;
+    line-height: 1;
   }
-  .park-brand .p1{ color:var(--brand-red); }
-  .park-brand .p2{ color:#ffb400; }
-  .txt .t2{font-weight:600;color:var(--muted);font-size:11px; margin-top:2px;}
-
-  .nav{display:flex;flex-direction:column;gap:10px;margin-top:8px}
-  .nav a{
-    display:flex;align-items:center;gap:10px;text-decoration:none;
-    padding:11px 12px;border-radius:12px;border:1px solid var(--border);
-    color:var(--text); background:#fff; transition:.2s;
-  }
-  .nav a:hover{transform:translateY(-1px); border-color:var(--brand-red); color:var(--brand-red)}
-  .nav a.active{
-    background: linear-gradient(135deg,var(--brand-red) 0%, var(--brand-orange) 100%);
-    color:#fff; border-color:transparent;
-  }
-  .ico{
-    width:28px;height:28px;border-radius:8px;background:#f8f9fa;
-    display:flex;align-items:center;justify-content:center;color:#6b7280;font-weight:700;
-  }
-  .spacer{flex:1}
-
-  .profile{
-    padding:12px;border:1px solid var(--border);border-radius:12px;background:#fff;
-    display:flex;align-items:center;gap:10px;cursor:pointer;transition: all 0.2s;
-  }
-  .profile:hover{border-color:var(--brand-red);background:#fff5f5;}
-  .avatar{width:30px;height:30px;border-radius:50%;background:#f3f4f6}
-  .nm{font-weight:600;font-size:12px;color:var(--text)}
-  .em{font-size:11px;color:var(--muted)}
-
-  .modal-overlay{
-    position: fixed;top: 0;left: 0;width: 100%;height: 100%;
-    background: rgba(0, 0, 0, 0.5);display: none;align-items: center;
-    justify-content: center;z-index: 1000;
-  }
-  .modal-overlay.show{display: flex;}
-
-  .account-modal{
-    background: #fff;border-radius: 12px;width: 90%;max-width: 420px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.2);position: relative;
+  .park-brand .p1 { color: var(--brand-red); }
+  .park-brand .p2 { color: #ffb400; }
+  .brand-subtitle { 
+    font-weight: 500; 
+    color: var(--muted); 
+    font-size: 12px; 
+    text-transform: uppercase;
+    letter-spacing: 1px;
   }
 
-  .modal-header{
-    padding: 20px 24px;border-bottom: 1px solid var(--border);
-    display: flex;align-items: center;justify-content: space-between;
+  .nav { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+
+  .nav a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    color: var(--text);
+    background: var(--surface);
+    transition: all 0.2s ease;
+    font-weight: 500;
+    font-size: 14px;
   }
 
-  .modal-title{font-size: 18px;font-weight: 700;color: var(--text);margin: 0;}
-
-  .close-btn{
-    width: 28px;height: 28px;border: none;background: transparent;
-    color: var(--muted);font-size: 20px;cursor: pointer;
-    display: flex;align-items: center;justify-content: center;
-    border-radius: 6px;transition: all 0.2s;
-  }
-  .close-btn:hover{background: var(--border);color: var(--text);}
-
-  .modal-body{padding: 24px;}
-  .form-field{margin-bottom: 20px;}
-  .form-field:last-child{margin-bottom: 0;}
-
-  .field-label{
-    display: block;font-size: 13px;font-weight: 600;
-    color: var(--text);margin-bottom: 8px;
+  .nav a:hover {
+    background: var(--surface-elevated);
+    border-color: var(--border);
+    transform: translateX(4px);
   }
 
-  .field-input{
-    width: 100%;padding: 10px 12px;border: 1px solid var(--border);
-    border-radius: 8px;font-size: 14px;color: var(--text);
-    background: #f8f9fa;font-family: inherit;
-  }
-  .field-input:focus{outline: none;border-color: var(--brand-red);background: #fff;}
-
-  .modal-footer{
-    padding: 16px 24px;border-top: 1px solid var(--border);
-    display: flex;justify-content: flex-end;gap: 10px;
+  .nav a.active {
+    background: var(--brand-gradient);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(183, 28, 28, 0.3);
   }
 
-  .logout-btn-modal, .btn-save{
-    padding: 10px 20px;border: none;border-radius: 8px;
-    font-weight: 700;font-size: 14px;cursor: pointer;
-    background: linear-gradient(135deg,var(--brand-red) 0%, var(--brand-orange) 100%);
-    color: #fff;transition: all 0.2s;
-  }
-  .logout-btn-modal:hover, .btn-save:hover{
-    filter: brightness(1.1);transform: translateY(-1px);
-  }
-
-  .btn-delete{
-    padding: 10px 20px;border: none;border-radius: 8px;
-    font-weight: 700;font-size: 14px;cursor: pointer;
-    background: #dc2626;color: #fff;transition: all 0.2s;
-  }
-  .btn-delete:hover{background: #b91c1c;}
-
-  .content-wrapper{display: flex;flex-direction: column;gap: 14px;}
-
-  .top-header{
-    display: flex;align-items: center;justify-content: space-between;padding: 0 4px;
+  .nav-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: var(--surface-elevated);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
   }
 
-  .left-section{display: flex;align-items: center;gap: 16px;}
-  .location-label{font-size: 14px;font-weight: 700;color: var(--text);}
-  .location-filters{display: flex;gap: 8px;}
+  .nav a.active .nav-icon { background: rgba(255,255,255,0.2); }
+  .spacer { flex: 1; }
 
-  .filter-btn{
-    padding: 6px 14px;border: 1px solid var(--border);background: #fff;
-    border-radius: 6px;font-weight: 600;font-size: 13px;
-    cursor: pointer;transition: all 0.2s;color: var(--text);
-  }
-  .filter-btn:hover{border-color: var(--brand-red);color: var(--brand-red);}
-  .filter-btn.active{
-    background: linear-gradient(135deg,var(--brand-red) 0%, var(--brand-orange) 100%);
-    color: #fff;border-color: transparent;
-  }
-
-  .slot-counters{display: flex;gap: 12px;}
-
-  .counter{
-    display: flex;align-items: center;gap: 8px;padding: 6px 14px;
-    border-radius: 6px;border: 1px solid var(--border);background: #fff;
+  .profile {
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
   }
 
-  .counter-number{font-size: 16px;font-weight: 700;}
-  .counter.filled .counter-number{color: #e53935;}
-  .counter.empty .counter-number{color: #2fbf4a;}
-  .counter-label{font-size: 12px;font-weight: 600;color: var(--muted);}
+  .profile:hover { border-color: var(--brand-red); background: #fff5f5; }
 
-  .main{
-    background:#fff;border:1px solid var(--border);border-radius:12px;
-    box-shadow:0 1px 2px rgba(0,0,0,.04);padding:20px;
-  }
-
-  .parking-grid{
-    display:grid;
-    grid-template-columns: repeat(auto-fill,minmax(150px,1fr));
-    gap:12px;
-  }
-
-  .parking-slot{
-    border:2px solid var(--border);
-    border-radius:10px;
-    padding:14px 12px;
-    background:#fff;
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-    cursor:pointer;
-    transition:all 0.2s;
-    text-align:left;
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--brand-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
   }
 
-  .parking-slot:hover{
-    transform:translateY(-2px);
-    box-shadow:0 8px 18px rgba(15,23,42,0.08);
+  .profile-info .nm { font-weight: 600; font-size: 13px; color: var(--text); }
+  .profile-info .em { font-size: 11px; color: var(--muted); }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  .modal-overlay.show { display: flex; }
+
+  .account-modal {
+    background: #fff;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 420px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    position: relative;
+    animation: modalIn 0.3s ease;
   }
 
-  .parking-slot .slot-number{
-    font-size:16px;
-    font-weight:700;
-    color:var(--text);
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
   }
 
-  .parking-slot .slot-status{
-    font-size:13px;
-    font-weight:600;
-    padding:4px 8px;
-    border-radius:999px;
-    width:max-content;
+  .modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
 
-  .status-available{
-    border-color:#34d399;
-    background:linear-gradient(135deg,#ecfdf5,#d1fae5);
-  }
-  .status-available .slot-status{
-    background:#d1fae5;
-    color:#047857;
+  .modal-title { font-size: 18px; font-weight: 700; color: var(--text); margin: 0; }
+
+  .close-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: var(--surface-elevated);
+    color: var(--muted);
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: all 0.2s;
   }
 
-  .status-occupied{
-    border-color:#f87171;
-    background:linear-gradient(135deg,#fef2f2,#fee2e2);
-  }
-  .status-occupied .slot-status{
-    background:#fee2e2;
-    color:#b91c1c;
+  .close-btn:hover { background: #fee2e2; color: var(--brand-red); }
+
+  .modal-body { padding: 24px; }
+  .form-field { margin-bottom: 20px; }
+  .form-field:last-child { margin-bottom: 0; }
+
+  .field-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 
-  .status-reserved{
-    border-color:#fbbf24;
-    background:linear-gradient(135deg,#fffbeb,#fef3c7);
-  }
-  .status-reserved .slot-status{
-    background:#fef3c7;
-    color:#b45309;
-  }
-
-  .status-unavailable{
-    border-color:#94a3b8;
-    background:linear-gradient(135deg,#f1f5f9,#e2e8f0);
-  }
-  .status-unavailable .slot-status{
-    background:#e2e8f0;
-    color:#475569;
+  .field-input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--surface-elevated);
+    font-family: inherit;
+    transition: all 0.2s;
   }
 
-  @media (max-width: 1024px){
-    .app{grid-template-columns: 1fr;}
-    .parking-grid{grid-template-columns: repeat(2, 1fr);}
-    .left-section{flex-wrap: wrap;}
+  .field-input:focus {
+    outline: none;
+    border-color: var(--brand-red);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(183, 28, 28, 0.1);
   }
 
-  /* Notification Styles */
+  .modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .btn-save, .logout-btn-modal {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    background: var(--brand-gradient);
+    color: #fff;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+
+  .btn-save:hover, .logout-btn-modal:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(183, 28, 28, 0.3);
+  }
+
+  /* Content Area */
+  .content-wrapper { display: flex; flex-direction: column; gap: 20px; }
+
+  .top-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .left-section { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .location-label { font-size: 14px; font-weight: 700; color: var(--text); }
+  .location-filters { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .filter-btn {
+    padding: 10px 18px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text);
+    font-family: inherit;
+  }
+
+  .filter-btn:hover {
+    border-color: var(--brand-red);
+    color: var(--brand-red);
+    transform: translateY(-1px);
+  }
+
+  .filter-btn.active {
+    background: var(--brand-gradient);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(183, 28, 28, 0.3);
+  }
+
+  .slot-counters { display: flex; gap: 12px; }
+
+  .counter {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .counter-number {
+    font-size: 20px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .counter.filled .counter-number { color: #e53935; }
+  .counter.empty .counter-number { color: #10b981; }
+  .counter-label { font-size: 12px; font-weight: 600; color: var(--muted); }
+
+  /* Main Card */
+  .main {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    padding: 24px;
+  }
+
+  .parking-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 14px;
+  }
+
+  .parking-slot {
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 14px;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+  }
+
+  .parking-slot:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(15,23,42,0.1);
+  }
+
+  .parking-slot .slot-number {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .parking-slot .slot-status {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 999px;
+    width: max-content;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  .status-available {
+    border-color: #34d399;
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+  }
+  .status-available .slot-status { background: #d1fae5; color: #047857; }
+
+  .status-occupied {
+    border-color: #f87171;
+    background: linear-gradient(135deg, #fef2f2, #fee2e2);
+  }
+  .status-occupied .slot-status { background: #fee2e2; color: #b91c1c; }
+
+  .status-reserved {
+    border-color: #fbbf24;
+    background: linear-gradient(135deg, #fffbeb, #fef3c7);
+  }
+  .status-reserved .slot-status { background: #fef3c7; color: #b45309; }
+
+  .status-unavailable {
+    border-color: #94a3b8;
+    background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+  }
+  .status-unavailable .slot-status { background: #e2e8f0; color: #475569; }
+
+  .empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  /* Notifications */
   .notification-container {
     position: fixed;
     top: 20px;
@@ -283,30 +442,25 @@
   }
 
   .notification {
-    background: #fff;
-    border-radius: 8px;
+    background: var(--surface);
+    border-radius: 12px;
     padding: 16px 20px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    min-width: 300px;
-    max-width: 400px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    min-width: 320px;
+    max-width: 420px;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
     animation: slideIn 0.3s ease-out;
     border-left: 4px solid;
   }
 
-  .notification.success {
-    border-left-color: #2fbf4a;
-  }
-
-  .notification.error {
-    border-left-color: #e53935;
-  }
+  .notification.success { border-left-color: #10b981; }
+  .notification.error { border-left-color: #e53935; }
 
   .notification-icon {
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -316,15 +470,8 @@
     flex-shrink: 0;
   }
 
-  .notification.success .notification-icon {
-    background: #d1fae5;
-    color: #047857;
-  }
-
-  .notification.error .notification-icon {
-    background: #fee2e2;
-    color: #b91c1c;
-  }
+  .notification.success .notification-icon { background: #d1fae5; color: #047857; }
+  .notification.error .notification-icon { background: #fee2e2; color: #b91c1c; }
 
   .notification-message {
     flex: 1;
@@ -334,29 +481,27 @@
   }
 
   @keyframes slideIn {
-    from {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
   }
 
   @keyframes slideOut {
-    from {
-      transform: translateX(0);
-      opacity: 1;
-    }
-    to {
-      transform: translateX(100%);
-      opacity: 0;
-    }
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
   }
 
-  .notification.hiding {
-    animation: slideOut 0.3s ease-out forwards;
+  .notification.hiding { animation: slideOut 0.3s ease-out forwards; }
+
+  /* Responsive */
+  @media (max-width: 1024px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { position: relative; top: 0; }
+    .parking-grid { grid-template-columns: repeat(2, 1fr); }
+    .left-section { flex-wrap: wrap; }
+  }
+
+  @media (max-width: 640px) {
+    .parking-grid { grid-template-columns: 1fr; }
   }
 </style>
 
@@ -369,39 +514,44 @@
           <span class="dot yellow"></span>
           <span class="dot green"></span>
         </div>
-        <div class="txt">
+        <div>
           <div class="park-brand">
             <span class="p1">Park</span><span class="p2">IT!</span>
           </div>
-          <div class="t2">Online</div>
+          <div class="brand-subtitle">Admin Portal</div>
         </div>
       </div>
 
       <nav class="nav">
         <a href="{% url 'dashboard' %}">
-          <span class="ico">▦</span><span>Dashboard</span>
+          <span class="nav-icon">📊</span>
+          <span>Dashboard</span>
         </a>
         <a class="active" href="{% url 'parking_spaces' %}">
-          <span class="ico">🅿</span><span>Parking Spaces</span>
+          <span class="nav-icon">🅿️</span>
+          <span>Parking Spaces</span>
         </a>
         <a href="{% url 'admin_parking_history' %}">
-          <span class="ico">📋</span><span>Parking History</span>
+          <span class="nav-icon">📋</span>
+          <span>Parking History</span>
         </a>
         <a href="{% url 'advanced_reports' %}">
-          <span class="ico">📈</span><span>Advanced Reports</span>
+          <span class="nav-icon">📈</span>
+          <span>Advanced Reports</span>
         </a>
         <a href="{% url 'manage_users' %}">
-          <span class="ico">👥</span><span>Manage Users</span>
+          <span class="nav-icon">👥</span>
+          <span>Manage Users</span>
         </a>
       </nav>
 
       <div class="spacer"></div>
 
       <div class="profile" id="profileTrigger">
-        <div class="avatar"></div>
-        <div>
-          <div class="nm">{{ full_name|default:"Admin Name" }}</div>
-          <div class="em">{{ email|default:"admin email" }}</div>
+        <div class="avatar">{{ full_name|slice:":1"|upper|default:"A" }}</div>
+        <div class="profile-info">
+          <div class="nm">{{ full_name|default:"Admin" }}</div>
+          <div class="em">{{ email|default:"admin@parkit.com" }}</div>
         </div>
       </div>
     </aside>
@@ -409,7 +559,7 @@
     <div class="content-wrapper">
       <div class="top-header">
         <div class="left-section">
-          <div class="location-label">Location</div>
+          <div class="location-label">🏢 Location</div>
           <div class="location-filters">
             {% if lots %}
               {% for lot in lots %}
@@ -418,7 +568,7 @@
               </button>
               {% endfor %}
             {% else %}
-              <span class="counter-label">No parking lots yet.</span>
+              <span class="counter-label">No parking lots configured.</span>
             {% endif %}
           </div>
         </div>
@@ -451,7 +601,10 @@
             </button>
             {% endfor %}
           {% else %}
-            <div class="empty-state">No slots configured for this lot.</div>
+            <div class="empty-state">
+              <div style="font-size: 48px; margin-bottom: 16px;">🅿️</div>
+              No parking slots configured for this lot.
+            </div>
           {% endif %}
         </div>
       </section>
@@ -469,60 +622,48 @@
     <div class="modal-body">
       <div class="form-field">
         <label class="field-label">Full Name</label>
-        <input type="text" class="field-input" value="{{ full_name|default:'User Name' }}" readonly>
-      </div>
-      <div class="form-field">
-        <label class="field-label">Username</label>
-        <input type="text" class="field-input" value="{{ username|default:'username' }}" readonly>
+        <input type="text" class="field-input" value="{{ full_name|default:'Admin' }}" readonly>
       </div>
       <div class="form-field">
         <label class="field-label">Email</label>
-        <input type="email" class="field-input" value="{{ email|default:'user@email.com' }}" readonly>
-      </div>
-      <div class="form-field">
-        <label class="field-label">Password</label>
-        <input type="password" class="field-input" value="********" readonly>
+        <input type="email" class="field-input" value="{{ email|default:'admin@parkit.com' }}" readonly>
       </div>
     </div>
     <div class="modal-footer">
-      <form method="post" action="{% url 'logout' %}" style="margin:0;">
+      <form method="post" action="{% url 'logout' %}" style="margin:0; width: 100%;">
         {% csrf_token %}
-        <button type="submit" class="logout-btn-modal">Logout</button>
+        <button type="submit" class="logout-btn-modal" style="width: 100%;">Logout</button>
       </form>
     </div>
   </div>
 </div>
 
-<!-- Edit Slot Modal (Admin) -->
+<!-- Slot Edit Modal -->
 <div class="modal-overlay" id="slotModal">
   <div class="account-modal">
     <div class="modal-header">
-      <h3 class="modal-title" id="slotModalTitle">Slot 19</h3>
+      <h3 class="modal-title" id="slotModalTitle">Slot Details</h3>
       <button class="close-btn" id="closeSlotModal">&times;</button>
     </div>
     <div class="modal-body">
       <div class="form-field">
         <label class="field-label">Plate Number</label>
-        <div style="display: flex; gap: 8px;">
-          <input type="text" class="field-input" id="slotPlateNumber" placeholder="PlateNumber" style="flex: 1;">
-          <button type="button" id="refreshPlateBtn" style="width: 40px; height: 40px; border: 1px solid var(--border); background: #fff; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--muted); transition: all 0.2s;" onmouseover="this.style.borderColor='var(--brand-red)'; this.style.color='var(--brand-red)';" onmouseout="this.style.borderColor='var(--border)'; this.style.color='var(--muted)';">
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-          </button>
+        <div style="display: flex; gap: 10px;">
+          <input type="text" class="field-input" id="slotPlateNumber" placeholder="Enter plate number" style="flex: 1;">
+          <button type="button" id="refreshPlateBtn" class="btn-save" style="padding: 12px;">🔄</button>
         </div>
       </div>
       <div class="form-field">
-        <label class="field-label">Date</label>
-        <input type="text" class="field-input" id="slotDate" placeholder="mm/dd/yyyy" readonly style="background: #f3f4f6;">
+        <label class="field-label">Check-in Date</label>
+        <input type="text" class="field-input" id="slotDate" placeholder="mm/dd/yyyy" readonly style="background: var(--surface-elevated);">
       </div>
       <div class="form-field">
-        <label class="field-label">Time</label>
-        <input type="text" class="field-input" id="slotTime" placeholder="----" readonly style="background: #f3f4f6;">
+        <label class="field-label">Check-in Time</label>
+        <input type="text" class="field-input" id="slotTime" placeholder="--:--:--" readonly style="background: var(--surface-elevated);">
       </div>
       <div class="form-field">
-        <label class="field-label">Slot Status</label>
-        <select class="field-input" id="slotStatusSelect" style="appearance: auto; background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\'><polyline points=\'6 9 12 15 18 9\'></polyline></svg>'); background-repeat: no-repeat; background-position: right 8px center; background-size: 16px; padding-right: 32px;">
+        <label class="field-label">Status</label>
+        <select class="field-input" id="slotStatusSelect">
           <option value="available">Available</option>
           <option value="occupied">Occupied</option>
           <option value="reserved">Reserved</option>
@@ -530,9 +671,9 @@
         </select>
       </div>
     </div>
-    <div class="modal-footer" style="display: flex; gap: 10px; justify-content: space-between;">
+    <div class="modal-footer">
       <div style="display: flex; gap: 10px;">
-        <button class="btn-save" id="checkInBtn" style="background: linear-gradient(135deg, #2fbf4a 0%, #28c840 100%);">Check-In</button>
+        <button class="btn-save" id="checkInBtn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">Check-In</button>
         <button class="btn-save" id="checkOutBtn" style="background: linear-gradient(135deg, #e53935 0%, #b91c1c 100%);">Check-Out</button>
       </div>
       <button class="btn-save" id="saveChanges">Save Changes</button>
@@ -540,12 +681,9 @@
   </div>
 </div>
 
-<!-- Notification Container -->
 <div class="notification-container" id="notificationContainer"></div>
 
-<!-- Hidden CSRF Token for API calls -->
 <div style="display:none;">{% csrf_token %}</div>
-
 <form id="slotStatusForm" method="post" style="display:none;">
   {% csrf_token %}
   <input type="hidden" name="status" id="slotStatusInput">
@@ -553,7 +691,6 @@
 </form>
 
 <script>
-  // Get CSRF token from cookies
   function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -575,7 +712,6 @@
     return getCookie('csrftoken');
   }
 
-  // Notification System
   function showNotification(message, type = 'success') {
     const container = document.getElementById('notificationContainer');
     const notification = document.createElement('div');
@@ -593,14 +729,9 @@
     notification.appendChild(messageDiv);
     container.appendChild(notification);
     
-    // Auto-remove after 4 seconds
     setTimeout(() => {
       notification.classList.add('hiding');
-      setTimeout(() => {
-        if (notification.parentNode) {
-          notification.parentNode.removeChild(notification);
-        }
-      }, 300);
+      setTimeout(() => notification.parentNode?.removeChild(notification), 300);
     }, 4000);
   }
 
@@ -618,67 +749,44 @@
   document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const href = btn.dataset.href;
-      if (href) {
-        window.location = href;
-      }
+      if (href) window.location = href;
     });
   });
 
-  // Slot Modals
+  // Slot Modal
   const slotModal = document.getElementById('slotModal');
   const closeSlotModal = document.getElementById('closeSlotModal');
   const slotStatusSelect = document.getElementById('slotStatusSelect');
   const slotModalTitle = document.getElementById('slotModalTitle');
   const slotForm = document.getElementById('slotStatusForm');
   const slotStatusInput = document.getElementById('slotStatusInput');
-  const slotLotInput = document.getElementById('slotLotInput');
   const slotPlateInput = document.getElementById('slotPlateNumber');
   let activeSlot = null;
 
-  // Format date helper
   function formatDate(dateString) {
     if (!dateString) return '';
     try {
       const date = new Date(dateString);
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const year = date.getFullYear();
-      return `${month}/${day}/${year}`;
-    } catch (e) {
-      return '';
-    }
+      return `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}/${date.getFullYear()}`;
+    } catch (e) { return ''; }
   }
 
-  // Format time helper
   function formatTime(dateString) {
     if (!dateString) return '';
     try {
       const date = new Date(dateString);
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
-      const seconds = String(date.getSeconds()).padStart(2, '0');
-      return `${hours}:${minutes}:${seconds}`;
-    } catch (e) {
-      return '';
-    }
+      return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+    } catch (e) { return ''; }
   }
 
-  // Get current date/time
   function getCurrentDateTime() {
     const now = new Date();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const year = now.getFullYear();
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
     return {
-      date: `${month}/${day}/${year}`,
-      time: `${hours}:${minutes}:${seconds}`
+      date: formatDate(now.toISOString()),
+      time: formatTime(now.toISOString())
     };
   }
 
-  // Slot Click Handler - Always show edit modal for admin
   document.querySelectorAll('.parking-slot').forEach(slot => {
     slot.addEventListener('click', () => {
       activeSlot = slot;
@@ -686,27 +794,24 @@
       const slotId = slot.dataset.slotId;
       const slotNumber = slot.dataset.slotNumber;
       
-      // Always show edit modal
       slotModalTitle.textContent = `Slot ${slotNumber}`;
       slotStatusSelect.value = slotStatus;
       slotPlateInput.value = slot.dataset.licensePlate || '';
       
-      // Show/hide check-in/check-out buttons based on status
       const checkInBtn = document.getElementById('checkInBtn');
       const checkOutBtn = document.getElementById('checkOutBtn');
+      
       if (slotStatus === 'available') {
         checkInBtn.style.display = 'block';
         checkOutBtn.style.display = 'none';
-        // Set current date/time for check-in
         const current = getCurrentDateTime();
         document.getElementById('slotDate').value = current.date;
         document.getElementById('slotTime').value = current.time;
       } else if (slotStatus === 'occupied') {
         checkInBtn.style.display = 'none';
         checkOutBtn.style.display = 'block';
-        // Fetch slot details for date/time
         fetch(`/api/parking-slots/${slotId}/details/`)
-          .then(response => response.json())
+          .then(r => r.json())
           .then(data => {
             if (data.success) {
               if (data.slot.license_plate) {
@@ -716,67 +821,27 @@
               if (data.slot.check_in_time) {
                 document.getElementById('slotDate').value = formatDate(data.slot.check_in_time);
                 document.getElementById('slotTime').value = formatTime(data.slot.check_in_time);
-                return;
               }
             }
-            const current = getCurrentDateTime();
-            document.getElementById('slotDate').value = current.date;
-            document.getElementById('slotTime').value = current.time;
-          })
-          .catch(error => {
-            const current = getCurrentDateTime();
-            document.getElementById('slotDate').value = current.date;
-            document.getElementById('slotTime').value = current.time;
           });
       } else {
         checkInBtn.style.display = 'none';
         checkOutBtn.style.display = 'none';
-        // Fetch slot details for date/time
-        fetch(`/api/parking-slots/${slotId}/details/`)
-          .then(response => response.json())
-          .then(data => {
-            if (data.success) {
-              if (data.slot.license_plate) {
-                slot.dataset.licensePlate = data.slot.license_plate;
-                slotPlateInput.value = data.slot.license_plate;
-              }
-              if (data.slot.check_in_time) {
-                document.getElementById('slotDate').value = formatDate(data.slot.check_in_time);
-                document.getElementById('slotTime').value = formatTime(data.slot.check_in_time);
-                return;
-              }
-            }
-            document.getElementById('slotDate').value = '';
-            document.getElementById('slotTime').value = '';
-          })
-          .catch(error => {
-            document.getElementById('slotDate').value = '';
-            document.getElementById('slotTime').value = '';
-          });
+        document.getElementById('slotDate').value = '';
+        document.getElementById('slotTime').value = '';
       }
       
       slotModal.classList.add('show');
     });
   });
 
-  // Close Modal
-  closeSlotModal.addEventListener('click', () => {
-    slotModal.classList.remove('show');
-    activeSlot = null;
-  });
+  closeSlotModal.addEventListener('click', () => { slotModal.classList.remove('show'); activeSlot = null; });
+  slotModal.addEventListener('click', (e) => { if (e.target === slotModal) { slotModal.classList.remove('show'); activeSlot = null; } });
 
-  slotModal.addEventListener('click', (e) => {
-    if (e.target === slotModal) {
-      slotModal.classList.remove('show');
-      activeSlot = null;
-    }
-  });
-
-  // Check-In Handler
   document.getElementById('checkInBtn').addEventListener('click', () => {
     if (!activeSlot) return;
     const slotId = activeSlot.dataset.slotId;
-    const plateNumber = document.getElementById('slotPlateNumber').value.trim();
+    const plateNumber = slotPlateInput.value.trim();
     
     if (!plateNumber) {
       showNotification('Please enter a license plate number', 'error');
@@ -785,93 +850,44 @@
     
     fetch(`/api/parking-slots/${slotId}/check-in/`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': getCSRFToken()
-      },
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() },
       body: JSON.stringify({ license_plate: plateNumber })
     })
-    .then(response => {
-      if (!response.ok) {
-        return response.json().then(data => {
-          throw new Error(data.error || `HTTP ${response.status}`);
-        });
-      }
-      return response.json();
-    })
+    .then(r => r.ok ? r.json() : r.json().then(d => { throw new Error(d.error || `HTTP ${r.status}`); }))
     .then(data => {
       if (data.success) {
-        let message = data.message || 'Vehicle checked in successfully';
-        if (data.warning) {
-          message += ` (Warning: ${data.warning})`;
-          console.warn('Check-in warning:', data.warning);
-        }
-        if (data.vehicle_warning) {
-          console.warn('Vehicle warning:', data.vehicle_warning);
-        }
-        showNotification(message, data.warning ? 'error' : 'success');
+        showNotification(data.message || 'Vehicle checked in successfully');
         slotModal.classList.remove('show');
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
+        setTimeout(() => window.location.reload(), 1000);
       } else {
         showNotification(data.error || 'Check-in failed', 'error');
       }
     })
-    .catch(error => {
-      console.error('Check-in error:', error);
-      showNotification(error.message || 'Error during check-in', 'error');
-    });
+    .catch(e => showNotification(e.message || 'Error during check-in', 'error'));
   });
 
-  // Check-Out Handler
   document.getElementById('checkOutBtn').addEventListener('click', () => {
     if (!activeSlot) return;
     const slotId = activeSlot.dataset.slotId;
-    const plateNumber = slotPlateInput.value.trim();
     
     fetch(`/api/parking-slots/${slotId}/check-out/`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': getCSRFToken()
-      },
-      body: JSON.stringify({ license_plate: plateNumber || null })
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() },
+      body: JSON.stringify({ license_plate: slotPlateInput.value.trim() || null })
     })
-    .then(response => {
-      if (!response.ok) {
-        return response.json().then(data => {
-          throw new Error(data.error || `HTTP ${response.status}`);
-        });
-      }
-      return response.json();
-    })
+    .then(r => r.ok ? r.json() : r.json().then(d => { throw new Error(d.error || `HTTP ${r.status}`); }))
     .then(data => {
       if (data.success) {
-        let message = data.message || 'Vehicle checked out successfully';
-        if (data.warning) {
-          message += ` (Warning: ${data.warning})`;
-          console.warn('Check-out warning:', data.warning);
-        }
-        if (data.vehicle_warning) {
-          console.warn('Vehicle warning:', data.vehicle_warning);
-        }
-        showNotification(message, data.warning ? 'error' : 'success');
+        showNotification(data.message || 'Vehicle checked out successfully');
         slotModal.classList.remove('show');
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
+        setTimeout(() => window.location.reload(), 1000);
       } else {
         showNotification(data.error || 'Check-out failed', 'error');
       }
     })
-    .catch(error => {
-      console.error('Check-out error:', error);
-      showNotification(error.message || 'Error during check-out', 'error');
-    });
+    .catch(e => showNotification(e.message || 'Error during check-out', 'error'));
   });
 
-  // Save Changes Handler (Edit Modal) - Only for status changes
   document.getElementById('saveChanges').addEventListener('click', () => {
     if (!activeSlot) return;
     slotForm.action = activeSlot.dataset.updateUrl;
@@ -879,13 +895,12 @@
     slotForm.submit();
   });
 
-  // Refresh Plate Button (Edit Modal)
   document.getElementById('refreshPlateBtn').addEventListener('click', () => {
     if (!activeSlot) return;
     const slotId = activeSlot.dataset.slotId;
     
     fetch(`/api/parking-slots/${slotId}/details/`)
-      .then(response => response.json())
+      .then(r => r.json())
       .then(data => {
         if (data.success) {
           if (data.slot.license_plate) {
@@ -895,18 +910,11 @@
           if (data.slot.check_in_time) {
             document.getElementById('slotDate').value = formatDate(data.slot.check_in_time);
             document.getElementById('slotTime').value = formatTime(data.slot.check_in_time);
-          } else {
-            document.getElementById('slotDate').value = '';
-            document.getElementById('slotTime').value = '';
           }
           showNotification('Slot information refreshed', 'success');
-        } else {
-          showNotification('Failed to refresh slot information', 'error');
         }
       })
-      .catch(error => {
-        showNotification('Error refreshing slot information', 'error');
-      });
+      .catch(() => showNotification('Error refreshing', 'error'));
   });
 </script>
 {% endblock %}
