@@ -358,11 +358,29 @@
     padding: 24px;
   }
 
-  .parking-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 14px;
-  }
+ /* ===== CUSTOM 6-COLUMN PARKING GRID WITH BLOCK DRIVEWAYS ===== */
+
+.parking-grid-outer {
+  display: grid;
+  grid-template-columns: 1fr 60px 1fr 60px 1fr; /* 3 blocks + 2 driveways */
+  gap: 0;
+  width: 100%;
+}
+
+.parking-block {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* 2 slots per row */
+  gap: 5px;
+}
+
+.driveway-vertical {
+  width: 40px;
+}
+
+.driveway-horizontal {
+  height: 15px; /* mid horizontal driveway like screenshot */
+  grid-column: 1 / -1;
+}
 
   .parking-slot {
     border: 2px solid var(--border);
@@ -585,29 +603,78 @@
         </div>
       </div>
 
-      <section class="main">
-        <div class="parking-grid">
-          {% if slots %}
-            {% for slot in slots %}
-            <button type="button"
-                    class="parking-slot {{ slot.status_class }}"
-                    data-slot-id="{{ slot.id }}"
-                    data-slot-number="{{ slot.slot_number|default:'—' }}"
-                    data-slot-status="{{ slot.status }}"
-                    data-license-plate="{{ slot.license_plate|default:'' }}"
-                    data-update-url="{% url 'update_slot_status' slot.id %}">
-              <span class="slot-number">Slot {{ slot.slot_number|default:'—' }}</span>
-              <span class="slot-status">{{ slot.status_label }}</span>
-            </button>
-            {% endfor %}
-          {% else %}
-            <div class="empty-state">
-              <div style="font-size: 48px; margin-bottom: 16px;">🅿️</div>
-              No parking slots configured for this lot.
-            </div>
-          {% endif %}
-        </div>
-      </section>
+         <section class="main">
+<div class="parking-grid-outer">
+
+  <!-- ========== BLOCK 1: SLOTS 1–16 ========== -->
+  <div class="parking-block">
+    {% for slot in slots|slice:"0:16" %}
+    <button type="button"
+            class="parking-slot {{ slot.status_class }}"
+            data-slot-id="{{ slot.id }}"
+            data-slot-number="{{ slot.slot_number }}"
+            data-slot-status="{{ slot.status }}"
+            data-license-plate="{{ slot.license_plate|default:'' }}"
+            data-update-url="{% url 'update_slot_status' slot.id %}">
+
+      <span class="slot-number">Slot {{ slot.slot_number }}</span>
+      <span class="slot-status">{{ slot.status_label }}</span>
+    </button>
+
+    {% if forloop.counter|divisibleby:2 %}
+    <div class="driveway-horizontal"></div>
+    {% endif %}
+    {% endfor %}
+  </div>
+
+  <div class="driveway-vertical"></div>
+
+  <!-- ========== BLOCK 2: SLOTS 17–32 ========== -->
+  <div class="parking-block">
+    {% for slot in slots|slice:"16:32" %}
+    <button type="button"
+            class="parking-slot {{ slot.status_class }}"
+            data-slot-id="{{ slot.id }}"
+            data-slot-number="{{ slot.slot_number }}"
+            data-slot-status="{{ slot.status }}"
+            data-license-plate="{{ slot.license_plate|default:'' }}"
+            data-update-url="{% url 'update_slot_status' slot.id %}">
+
+      <span class="slot-number">Slot {{ slot.slot_number }}</span>
+      <span class="slot-status">{{ slot.status_label }}</span>
+    </button>
+
+    {% if forloop.counter|divisibleby:2 %}
+    <div class="driveway-horizontal"></div>
+    {% endif %}
+    {% endfor %}
+  </div>
+
+  <div class="driveway-vertical"></div>
+
+  <!-- ========== BLOCK 3: SLOTS 33–48 ========== -->
+  <div class="parking-block">
+    {% for slot in slots|slice:"32:48" %}
+    <button type="button"
+            class="parking-slot {{ slot.status_class }}"
+            data-slot-id="{{ slot.id }}"
+            data-slot-number="{{ slot.slot_number }}"
+            data-slot-status="{{ slot.status }}"
+            data-license-plate="{{ slot.license_plate|default:'' }}"
+            data-update-url="{% url 'update_slot_status' slot.id %}">
+
+      <span class="slot-number">Slot {{ slot.slot_number }}</span>
+      <span class="slot-status">{{ slot.status_label }}</span>
+    </button>
+
+    {% if forloop.counter|divisibleby:2 %}
+    <div class="driveway-horizontal"></div>
+    {% endif %}
+    {% endfor %}
+  </div>
+
+</div>
+</section>
     </div>
   </div>
 </div>
