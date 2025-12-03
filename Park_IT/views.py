@@ -2943,11 +2943,13 @@ class AdvancedReportsView(View):
         except Exception:
             parking_lots = []
 
-        # Fetch parking sessions data
+        # Fetch parking sessions data with limit to prevent loading too much data
+        # Limit to 5000 entries for performance (charts can use all, table shows first 100)
+        MAX_ENTRIES = 5000
         try:
             entries_query = supabase.table('entries_exits').select(
                 'id, time, vehicle_id, action, lot_id'
-            ).eq('action', 'entry').gte('time', start_date.isoformat()).order('time', desc=True)
+            ).eq('action', 'entry').gte('time', start_date.isoformat()).order('time', desc=True).limit(MAX_ENTRIES)
             
             if selected_lot:
                 entries_query = entries_query.eq('lot_id', int(selected_lot))
@@ -2980,11 +2982,44 @@ class AdvancedReportsView(View):
             except Exception:
                 lots_map = {}
 
-        # Build sessions with exit data
+        # OPTIMIZATION: Batch fetch all exit records for the entries in one query
+        # This eliminates N+1 query problem
+        vehicle_exits = {}  # Maps vehicle_id -> list of exit times
+        if entry_records and vehicle_ids:
+            try:
+                # Get all exit records for vehicles in our entry set, within the date range
+                exits_query = supabase.table('entries_exits').select(
+                    'vehicle_id, time, action'
+                ).eq('action', 'exit').in_('vehicle_id', vehicle_ids).gte('time', start_date.isoformat()).order('time')
+                
+                if selected_lot:
+                    exits_query = exits_query.eq('lot_id', int(selected_lot))
+                
+                exits_response = exits_query.execute()
+                exit_records = exits_response.data or []
+                
+                # Group exits by vehicle_id and find the first exit after each entry
+                # Create a sorted list of exits per vehicle for efficient lookup
+                vehicle_exits = defaultdict(list)
+                for exit_rec in exit_records:
+                    vid = exit_rec.get('vehicle_id')
+                    if vid:
+                        vehicle_exits[vid].append(exit_rec.get('time'))
+                
+                # Sort exits per vehicle for binary search
+                for vid in vehicle_exits:
+                    vehicle_exits[vid].sort()
+            except Exception:
+                vehicle_exits = {}
+        else:
+            vehicle_exits = {}
+
+        # Build sessions with exit data - optimized single loop
         parking_logs = []
         total_duration_minutes = 0
         completed_count = 0
 
+        # Process entries and find matching exits efficiently
         for entry in entry_records:
             vehicle_id = entry.get('vehicle_id')
             lot_id = entry.get('lot_id')
@@ -2996,16 +3031,14 @@ class AdvancedReportsView(View):
             plate_number = vehicles_map.get(vehicle_id, 'Unknown')
             lot_name_value = lots_map.get(lot_id, 'Unknown')
 
-            # Find exit
+            # Find exit using pre-fetched data (binary search for efficiency)
             exit_time = None
-            try:
-                exit_resp = supabase.table('entries_exits').select('time').eq(
-                    'vehicle_id', vehicle_id
-                ).eq('action', 'exit').gte('time', entry_time).order('time').limit(1).execute()
-                if exit_resp.data:
-                    exit_time = exit_resp.data[0].get('time')
-            except Exception:
-                pass
+            if vehicle_id in vehicle_exits and vehicle_exits[vehicle_id]:
+                # Find first exit after this entry time
+                for exit_t in vehicle_exits[vehicle_id]:
+                    if exit_t >= entry_time:
+                        exit_time = exit_t
+                        break
 
             status = 'Completed' if exit_time else 'Active'
             status_class = 'completed' if exit_time else 'active'
@@ -3041,13 +3074,30 @@ class AdvancedReportsView(View):
         else:
             avg_duration = f"{int(avg_duration_minutes)}m"
 
-        # Calculate monthly usage data for chart
+        # OPTIMIZATION: Process all chart data in a single loop instead of multiple loops
         monthly_data = defaultdict(int)
+        daily_data = defaultdict(int)
+        hourly_data = defaultdict(int)
+        lot_usage = defaultdict(int)
+        
         for log in parking_logs:
             try:
                 entry_dt = datetime.fromisoformat(log['entry_time'].replace('Z', '+00:00'))
+                
+                # Monthly data
                 month_key = entry_dt.strftime('%b %Y')
                 monthly_data[month_key] += 1
+                
+                # Daily data
+                day_key = entry_dt.strftime('%b %d')
+                daily_data[day_key] += 1
+                
+                # Hourly data
+                hour = entry_dt.hour
+                hourly_data[hour] += 1
+                
+                # Lot usage
+                lot_usage[log['lot_name']] += 1
             except Exception:
                 pass
 
@@ -3057,35 +3107,12 @@ class AdvancedReportsView(View):
         monthly_labels = [m[0] for m in sorted_months[-12:]]  # Last 12 months
         monthly_usage = [m[1] for m in sorted_months[-12:]]
 
-        # Daily usage for the selected period (for more granular chart)
-        daily_data = defaultdict(int)
-        for log in parking_logs:
-            try:
-                entry_dt = datetime.fromisoformat(log['entry_time'].replace('Z', '+00:00'))
-                day_key = entry_dt.strftime('%b %d')
-                daily_data[day_key] += 1
-            except Exception:
-                pass
-
         # Peak hours analysis
-        hourly_data = defaultdict(int)
-        for log in parking_logs:
-            try:
-                entry_dt = datetime.fromisoformat(log['entry_time'].replace('Z', '+00:00'))
-                hour = entry_dt.hour
-                hourly_data[hour] += 1
-            except Exception:
-                pass
-
         peak_hours = sorted(hourly_data.items(), key=lambda x: x[1], reverse=True)[:5]
         peak_hour_labels = [f"{h[0]:02d}:00" for h in peak_hours]
         peak_hour_values = [h[1] for h in peak_hours]
 
         # Lot usage breakdown
-        lot_usage = defaultdict(int)
-        for log in parking_logs:
-            lot_usage[log['lot_name']] += 1
-        
         lot_labels = list(lot_usage.keys())
         lot_values = list(lot_usage.values())
 

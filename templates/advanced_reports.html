@@ -827,23 +827,23 @@
       </div>
 
       <nav class="nav">
-        <a href="{% url 'dashboard' %}">
+        <a href="{% url 'dashboard' %}" class="nav-link" data-nav="dashboard">
           <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
           <span>Dashboard</span>
         </a>
-        <a href="{% url 'parking_spaces' %}">
+        <a href="{% url 'parking_spaces' %}" class="nav-link" data-nav="parking_spaces">
           <span class="nav-icon"><i class="fas fa-parking"></i></span>
           <span>Parking Spaces</span>
         </a>
-        <a href="{% url 'admin_parking_history' %}">
+        <a href="{% url 'admin_parking_history' %}" class="nav-link" data-nav="admin_parking_history">
           <span class="nav-icon"><i class="fas fa-clipboard-list"></i></span>
           <span>Parking History</span>
         </a>
-        <a class="active" href="{% url 'advanced_reports' %}">
+        <a class="active nav-link" href="{% url 'advanced_reports' %}" data-nav="advanced_reports">
           <span class="nav-icon"><i class="fas fa-chart-line"></i></span>
           <span>Advanced Reports</span>
         </a>
-        <a href="{% url 'manage_users' %}">
+        <a href="{% url 'manage_users' %}" class="nav-link" data-nav="manage_users">
           <span class="nav-icon"><i class="fas fa-users"></i></span>
           <span>Manage Users</span>
         </a>
@@ -967,10 +967,11 @@
             </div>
 
             <div class="filter-actions">
-              <button type="submit" class="btn btn-primary" style="flex: 1;">
-                  Filter
+              <button type="submit" class="btn btn-primary" style="flex: 1;" id="filter-submit-btn">
+                  <span id="filter-btn-text">Filter</span>
+                  <span id="filter-btn-spinner" class="spinner" style="display: none; margin: 0;"></span>
               </button>
-              <button type="button" class="btn btn-secondary" onclick="clearFilters()">
+              <button type="button" class="btn btn-secondary" onclick="clearFilters()" id="clear-btn">
                 Clear
               </button>
             </div>
@@ -1308,6 +1309,78 @@
     document.getElementById('vehicle-search').value = '';
     document.getElementById('filter-form').submit();
   };
+
+  // Request throttling/debouncing to prevent rapid clicks
+  let isSubmitting = false;
+  let submitTimeout = null;
+  
+  const filterForm = document.getElementById('filter-form');
+  const filterSubmitBtn = document.getElementById('filter-submit-btn');
+  const filterBtnText = document.getElementById('filter-btn-text');
+  const filterBtnSpinner = document.getElementById('filter-btn-spinner');
+  const clearBtn = document.getElementById('clear-btn');
+  
+  if (filterForm) {
+    filterForm.addEventListener('submit', function(e) {
+      // Prevent multiple simultaneous submissions
+      if (isSubmitting) {
+        e.preventDefault();
+        return false;
+      }
+      
+      // Set submitting state
+      isSubmitting = true;
+      if (filterSubmitBtn) {
+        filterSubmitBtn.disabled = true;
+        if (filterBtnText) filterBtnText.textContent = 'Loading...';
+        if (filterBtnSpinner) filterBtnSpinner.style.display = 'inline-block';
+      }
+      if (clearBtn) clearBtn.disabled = true;
+      
+      // Re-enable after a delay (in case of error, user can retry)
+      setTimeout(function() {
+        isSubmitting = false;
+        if (filterSubmitBtn) {
+          filterSubmitBtn.disabled = false;
+          if (filterBtnText) filterBtnText.textContent = 'Filter';
+          if (filterBtnSpinner) filterBtnSpinner.style.display = 'none';
+        }
+        if (clearBtn) clearBtn.disabled = false;
+      }, 5000); // 5 second timeout
+    });
+  }
+  
+  // Debounce filter changes to prevent rapid requests
+  const filterInputs = document.querySelectorAll('#filter-form select, #filter-form input');
+  filterInputs.forEach(function(input) {
+    // For select dropdowns, add debounce on change
+    if (input.tagName === 'SELECT') {
+      input.addEventListener('change', function() {
+        if (submitTimeout) clearTimeout(submitTimeout);
+        // Auto-submit after 500ms of no changes (debounce)
+        submitTimeout = setTimeout(function() {
+          if (!isSubmitting && filterForm) {
+            filterForm.submit();
+          }
+        }, 500);
+      });
+    }
+  });
+  
+  // Prevent rapid clicking on navigation links
+  let lastNavClick = 0;
+  const navLinks = document.querySelectorAll('.nav-link');
+  navLinks.forEach(function(link) {
+    link.addEventListener('click', function(e) {
+      const now = Date.now();
+      // Prevent clicks within 500ms of each other
+      if (now - lastNavClick < 500) {
+        e.preventDefault();
+        return false;
+      }
+      lastNavClick = now;
+    });
+  });
 })();
 </script>
 
