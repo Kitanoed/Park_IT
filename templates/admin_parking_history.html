@@ -594,7 +594,7 @@
 
       <div class="spacer"></div>
 
-      <div class="profile" onclick="window.location='{% url 'dashboard' %}'">
+      <div class="profile" id="profileLink" data-url="{% url 'dashboard' %}">
         <div class="avatar">{{ full_name|slice:":1"|upper|default:"A" }}</div>
         <div class="profile-info">
           <div class="nm">{{ full_name|default:"Admin" }}</div>
@@ -612,8 +612,6 @@
 
       <!-- Filter Section -->
       <div class="card">
-        
-        
         <form id="filter-form">
           <div class="filter-row">
             <div class="filter-group filter-group-full">
@@ -777,6 +775,8 @@
       if (lotFilter.value) params.append('lot_name', lotFilter.value);
       if (statusFilter.value) params.append('status', statusFilter.value);
       
+      // Ensure currentPage is at least 1
+      if (currentPage < 1) currentPage = 1;
       params.append('page', currentPage.toString());
       params.append('page_size', itemsPerPage.toString());
       
@@ -796,14 +796,17 @@
       currentSessions = data.results || [];
       totalCount = data.count || 0;
       totalPages = data.total_pages || 0;
-      currentPage = data.page || 1;
+      // Don't override currentPage if we're navigating - only use data.page if it's different
+      if (data.page && Math.abs(data.page - currentPage) <= 1) {
+        currentPage = data.page;
+      }
       
       if (currentSort.field) {
         sortSessions(currentSort.field);
       } else {
         renderTable();
-        updatePagination();
       }
+      updatePagination();
       
     } catch (error) {
       console.error('Error fetching parking history:', error);
@@ -831,9 +834,12 @@
       `;
       applyFiltersBtn.disabled = true;
       clearFiltersBtn.disabled = true;
+      prevPageBtn.disabled = true;
+      nextPageBtn.disabled = true;
     } else {
       applyFiltersBtn.disabled = false;
       clearFiltersBtn.disabled = false;
+      updatePagination();
     }
   }
 
@@ -898,6 +904,7 @@
     currentSessions = sortedSessions;
     updateSortIndicators();
     renderTable();
+    updatePagination();
   }
 
   function updateSortIndicators() {
@@ -951,9 +958,31 @@
   }
 
   function updatePagination() {
-    pageInfo.textContent = `Page ${currentPage} of ${totalPages || 1}`;
-    prevPageBtn.disabled = currentPage === 1 || isLoading;
-    nextPageBtn.disabled = currentPage >= totalPages || totalPages === 0 || isLoading;
+    const totalPagesDisplay = totalPages || 1;
+    pageInfo.textContent = `Page ${currentPage} of ${totalPagesDisplay}`;
+    
+    // Update previous button
+    prevPageBtn.disabled = currentPage <= 1 || isLoading || totalPages === 0;
+    
+    // Update next button
+    nextPageBtn.disabled = currentPage >= totalPagesDisplay || isLoading || totalPages === 0;
+    
+    // Add visual feedback
+    if (prevPageBtn.disabled) {
+      prevPageBtn.style.opacity = '0.5';
+      prevPageBtn.style.cursor = 'not-allowed';
+    } else {
+      prevPageBtn.style.opacity = '1';
+      prevPageBtn.style.cursor = 'pointer';
+    }
+    
+    if (nextPageBtn.disabled) {
+      nextPageBtn.style.opacity = '0.5';
+      nextPageBtn.style.cursor = 'not-allowed';
+    } else {
+      nextPageBtn.style.opacity = '1';
+      nextPageBtn.style.cursor = 'pointer';
+    }
   }
 
   // Event Listeners
@@ -982,15 +1011,17 @@
     clearFilters();
   });
 
-  prevPageBtn.addEventListener('click', function() {
+  prevPageBtn.addEventListener('click', function(e) {
+    e.preventDefault();
     if (currentPage > 1 && !isLoading) {
       currentPage--;
       fetchParkingHistory();
     }
   });
 
-  nextPageBtn.addEventListener('click', function() {
-    if (currentPage < totalPages && !isLoading) {
+  nextPageBtn.addEventListener('click', function(e) {
+    e.preventDefault();
+    if (currentPage < totalPages && !isLoading && totalPages > 0) {
       currentPage++;
       fetchParkingHistory();
     }
@@ -1001,6 +1032,14 @@
       sortSessions(this.getAttribute('data-sort'));
     });
   });
+
+  // Profile link
+  const profileLink = document.getElementById('profileLink');
+  if (profileLink) {
+    profileLink.addEventListener('click', function() {
+      window.location.href = this.getAttribute('data-url');
+    });
+  }
 
   // Initialize
   fetchParkingHistory();

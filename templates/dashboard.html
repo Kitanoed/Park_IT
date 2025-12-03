@@ -17,7 +17,6 @@
     --win-green: #28c840;
     
     --bar-red: #e53935;
-    --bar-yellow: #ffb400;
     --bar-green: #10b981;
     
     --surface: #ffffff;
@@ -350,7 +349,7 @@
   /* Cards and Grids */
   .grid-3 {
     display: grid;
-    grid-template-columns: 1.2fr 1fr 1fr;
+    grid-template-columns: 1.2fr 0.8fr 1fr;
     gap: 16px;
   }
 
@@ -415,13 +414,38 @@
   }
 
   .metric .big {
-    font-size: 56px;
+    font-size: 72px;
     font-weight: 700;
     color: var(--text);
     line-height: 1;
     font-family: 'JetBrains Mono', monospace;
   }
 
+  /* Middle column - entries/exits stacked */
+  .middle-col {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .middle-col .card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .middle-col .metric {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .middle-col .big {
+    font-size: 64px;
+  }
+
+  /* Status rows */
   .status-row {
     display: grid;
     grid-template-columns: 50px 1fr 48px;
@@ -446,35 +470,67 @@
     font-family: 'JetBrains Mono', monospace;
   }
 
+  .total-count {
+    font-weight: 700;
+    color: var(--text);
+    font-size: 13px;
+    text-align: right;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
   .bar {
-    height: 8px;
+    height: 10px;
     border-radius: 999px;
     background: var(--border-light);
     overflow: hidden;
+    display: flex;
   }
 
   .seg {
     display: block;
     height: 100%;
-    float: left;
     transition: width 0.5s ease;
   }
   .seg.red { background: var(--bar-red); }
-  .seg.yellow { background: var(--bar-yellow); }
   .seg.green { background: var(--bar-green); }
 
-  .week-row {
-    display: grid;
-    grid-template-columns: 80px 1fr 48px;
-    align-items: center;
-    gap: 12px;
-    margin: 8px 0;
-    font-size: 13px;
+  /* Legend */
+  .legend {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 12px;
+    font-size: 11px;
+    color: var(--muted);
   }
 
-  .week-day {
-    font-weight: 600;
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .legend-dot.red { background: var(--bar-red); }
+  .legend-dot.green { background: var(--bar-green); }
+
+  /* Occupancy header */
+  .occupancy-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 12px;
+  }
+
+  .occupancy-header .big-percent {
+    font-size: 48px;
+    font-weight: 700;
     color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
   }
 
   .empty-state {
@@ -577,9 +633,105 @@
     border-bottom: none;
   }
 
+  .week-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 48px;
+    align-items: center;
+    gap: 12px;
+    margin: 8px 0;
+    font-size: 13px;
+  }
+
+  .week-day {
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  /* Chart Container */
+  .chart-container {
+    position: relative;
+    width: 100%;
+  }
+
+  .bar-chart-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .bar-chart-period {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 24px;
+  }
+
+  .bar-chart {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    height: 200px;
+    padding: 0 8px;
+  }
+
+  .bar-chart-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    height: 100%;
+  }
+
+  .bar-chart-bar {
+    width: 100%;
+    border-radius: 8px 8px 0 0;
+    position: relative;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    background: linear-gradient(180deg, #f5e6d3 0%, #f4c2c2 100%);
+    min-height: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .bar-chart-bar:hover {
+    opacity: 0.85;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  }
+
+  .bar-chart-bar.highlight {
+    background: linear-gradient(180deg, #8b4513 0%, #d2691e 100%);
+    box-shadow: 0 4px 8px rgba(139, 69, 19, 0.3);
+  }
+
+  .bar-chart-value {
+    position: absolute;
+    top: -24px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    white-space: nowrap;
+  }
+
+
+  .bar-chart-label {
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 500;
+    text-align: center;
+  }
+
   /* Responsive */
   @media (max-width: 1280px) {
     .grid-3 { grid-template-columns: 1fr 1fr; }
+    .middle-col { flex-direction: row; }
+    .middle-col .card { flex: 1; }
   }
 
   @media (max-width: 1024px) {
@@ -587,6 +739,7 @@
     .sidebar { position: relative; top: 0; }
     .grid-3 { grid-template-columns: 1fr; }
     .grid-lower { grid-template-columns: 1fr; }
+    .middle-col { flex-direction: column; }
   }
 </style>
 
@@ -652,22 +805,31 @@
         </div>
       </div>
 
-      <!-- Stats Grid -->
+      <!-- Stats Grid - 3 columns like the reference -->
       <div class="grid-3">
-        <!-- Parking Lot Status -->
+        <!-- Left: Parking Lot Status -->
         <div class="card">
           <h4><span class="card-icon">🏢</span> Parking Lot Status</h4>
           <div class="sub">{{ summary_date }}</div>
+          <div class="legend">
+            <div class="legend-item">
+              <span class="legend-dot red"></span>
+              <span>Occupied</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot green"></span>
+              <span>Available</span>
+            </div>
+          </div>
           {% if lot_status %}
             {% for lot in lot_status %}
             <div class="status-row">
               <div class="lot-name">{{ lot.code }}</div>
               <div class="bar">
                 <span class="seg red" style="width:{{ lot.segment_red }}%"></span>
-                <span class="seg yellow" style="width:{{ lot.segment_yellow }}%"></span>
                 <span class="seg green" style="width:{{ lot.segment_green }}%"></span>
               </div>
-              <div class="percent">{{ lot.occupancy_percent }}%</div>
+              <div class="total-count">{{ lot.total_slots|default:"--" }}</div>
             </div>
             {% endfor %}
           {% else %}
@@ -675,27 +837,40 @@
           {% endif %}
         </div>
 
-        <!-- Total Entries -->
+        <!-- Middle: Entries & Exits stacked -->
+        <div class="middle-col">
         <div class="card metric">
-          <h4><span class="card-icon">🚗</span> Total Entries</h4>
-          <div class="sub">{{ summary_date }}</div>
-          <div class="big">{{ total_entries }}</div>
+            <h4><span class="card-icon">🚗</span> Total Entries for the Day</h4>
+            <div class="sub">{{ summary_date }}</div>
+            <div class="metric" style="text-align: center; padding: 20px 0;">
+            <div class="big">{{ total_entries }}</div>
+          </div>
         </div>
 
-        <!-- Total Current Occupancy -->
+          <div class="card metric">
+            <h4><span class="card-icon">🚶</span> Total Exits for the Day</h4>
+            <div class="sub">{{ summary_date }}</div>
+            <div class="metric" style="text-align: center; padding: 20px 0;">
+              <div class="big">{{ total_exits }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Total Current Occupancy -->
         <div class="card">
-          <h4><span class="card-icon">📊</span> Current Occupancy</h4>
-          <div class="sub">{{ summary_date }}</div>
-          <div class="metric" style="margin-bottom:12px;">
-            <div class="big" style="font-size:42px;">{{ overall_occupancy_pct }}%</div>
+          <div class="occupancy-header">
+            <div>
+              <h4 style="margin-bottom: 4px;"><span class="card-icon">📊</span> Total Current Occupancy</h4>
+              <div class="sub" style="margin-bottom: 0;">{{ summary_date }}</div>
+            </div>
+            <div class="big-percent">{{ overall_occupancy_pct }}%</div>
           </div>
           {% if lot_status %}
-            {% for lot in lot_status|slice:":4" %}
+            {% for lot in lot_status %}
             <div class="status-row">
               <div class="lot-name">{{ lot.code }}</div>
               <div class="bar">
                 <span class="seg red" style="width:{{ lot.segment_red }}%"></span>
-                <span class="seg yellow" style="width:{{ lot.segment_yellow }}%"></span>
                 <span class="seg green" style="width:{{ lot.segment_green }}%"></span>
               </div>
               <div class="percent">{{ lot.occupancy_percent }}%</div>
@@ -711,41 +886,35 @@
       <div class="grid-lower">
         <!-- Left Column -->
         <div class="left-col">
-          <div class="card metric">
-            <h4><span class="card-icon">🚶</span> Total Exits</h4>
-            <div class="sub">{{ summary_date }}</div>
-            <div class="big">{{ total_exits }}</div>
-          </div>
-
           <div class="card">
             <h4><span class="card-icon">⚡</span> Recent Activity</h4>
             <div class="table-container">
-              <table>
-                <thead>
+            <table>
+              <thead>
                   <tr>
                     <th>Time</th>
                     <th>Plate</th>
                     <th>Action</th>
                     <th>Zone</th>
                   </tr>
-                </thead>
-                <tbody>
-                  {% if recent_activity %}
-                    {% for act in recent_activity %}
-                    <tr>
+              </thead>
+              <tbody>
+                {% if recent_activity %}
+                  {% for act in recent_activity %}
+                  <tr>
                       <td style="font-family: 'JetBrains Mono', monospace;">{{ act.time }}</td>
                       <td><strong>{{ act.plate }}</strong></td>
-                      <td>{{ act.action }}</td>
-                      <td>{{ act.zone }}</td>
-                    </tr>
-                    {% endfor %}
-                  {% else %}
-                    <tr>
-                      <td colspan="4" class="empty-state">No movements recorded yet today.</td>
-                    </tr>
-                  {% endif %}
-                </tbody>
-              </table>
+                    <td>{{ act.action }}</td>
+                    <td>{{ act.zone }}</td>
+                  </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr>
+                    <td colspan="4" class="empty-state">No movements recorded yet today.</td>
+                  </tr>
+                {% endif %}
+              </tbody>
+            </table>
             </div>
           </div>
 
@@ -761,23 +930,13 @@
 
         <!-- Right Column -->
         <div class="card">
-          <h4><span class="card-icon">📅</span> Peak Parking Times</h4>
-          <div class="sub">Past 7 days</div>
-          {% if weekly_occupancy %}
-            {% for day in weekly_occupancy %}
-            <div class="week-row">
-              <div class="week-day">{{ day.label }}</div>
-              <div class="bar">
-                <span class="seg red" style="width:{{ day.value }}%"></span>
-                <span class="seg green" style="width:{{ day.available }}%"></span>
-              </div>
-              <div class="percent">{{ day.value }}%</div>
-            </div>
-            {% endfor %}
-          {% else %}
-            <div class="empty-state">No occupancy history yet.</div>
-          {% endif %}
+          <h4><span class="card-icon">📅</span> Daily Usage</h4>
+          <div class="sub">Last 30 Days</div>
+          <div class="chart-container" style="height: 250px; margin-top: 16px;">
+            <canvas id="dailyUsageChart"></canvas>
+          </div>
         </div>
+      </div>
       </div>
     </main>
   </div>
@@ -823,5 +982,83 @@
   accountModal.addEventListener('click', (e) => {
     if (e.target === accountModal) accountModal.classList.remove('show');
   });
+
+</script>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+  // Chart color palette
+  const colors = {
+    primary: '#b71c1c',
+    secondary: '#f57c00',
+    accent: '#fbbf24',
+    success: '#10b981',
+    info: '#3b82f6'
+  };
+
+  // Common chart options
+  const commonOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false
+      },
+      tooltip: {
+        backgroundColor: '#111827',
+        titleFont: { family: 'Space Grotesk', weight: '600' },
+        bodyFont: { family: 'Space Grotesk' },
+        padding: 12,
+        cornerRadius: 8,
+        displayColors: false
+      }
+    }
+  };
+
+  // Daily Usage Chart
+  const dailyCtx = document.getElementById('dailyUsageChart');
+  if (dailyCtx) {
+    const dailyLabels = {{ daily_labels|safe }};
+    const dailyUsage = {{ daily_usage|safe }};
+    
+    console.log('Daily Usage Chart Data:', { labels: dailyLabels, usage: dailyUsage });
+    
+    // Ensure we have valid arrays
+    const labels = Array.isArray(dailyLabels) && dailyLabels.length > 0 ? dailyLabels : ['No Data'];
+    const usage = Array.isArray(dailyUsage) && dailyUsage.length > 0 ? dailyUsage : [0];
+    
+    new Chart(dailyCtx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Daily Sessions',
+          data: usage,
+          backgroundColor: colors.secondary,
+          borderRadius: 4,
+          barThickness: 12
+        }]
+      },
+      options: {
+        ...commonOptions,
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(0,0,0,0.05)' },
+            ticks: { font: { family: 'JetBrains Mono' } }
+          },
+          x: {
+            grid: { display: false },
+            ticks: { 
+              font: { family: 'Space Grotesk', size: 10 },
+              maxRotation: 45,
+              minRotation: 45
+            }
+          }
+        }
+      }
+    });
+  }
 </script>
 {% endblock %}

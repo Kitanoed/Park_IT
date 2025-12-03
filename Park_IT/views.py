@@ -126,7 +126,7 @@ def build_lot_display(lots, slots, selected_lot_id=None):
 
 def summarize_lot_status(lots, slots):
     lot_map = {lot['id']: lot for lot in lots if lot.get('id') is not None}
-    counts = defaultdict(lambda: {'occupied': 0, 'reserved': 0, 'available': 0, 'total': 0})
+    counts = defaultdict(lambda: {'occupied': 0, 'available': 0, 'total': 0})
     overall_total = 0
     overall_occupied = 0
 
@@ -142,22 +142,20 @@ def summarize_lot_status(lots, slots):
             continue
         status = (slot.get('status') or 'available').lower()
         counts[lot_id]['total'] += 1
-        if status in ('occupied', 'taken', 'full', 'in_use', 'busy'):
+        # Count occupied, reserved, unavailable all as "occupied" (filled)
+        if status in ('occupied', 'taken', 'full', 'in_use', 'busy', 'reserved', 'hold', 'pending', 'unavailable'):
             counts[lot_id]['occupied'] += 1
-        elif status in ('reserved', 'hold', 'pending'):
-            counts[lot_id]['reserved'] += 1
         else:
             counts[lot_id]['available'] += 1
 
     lot_status = []
     for lot_id, lot in lot_map.items():
-        stats = counts.get(lot_id, {'occupied': 0, 'reserved': 0, 'available': 0, 'total': 0})
+        stats = counts.get(lot_id, {'occupied': 0, 'available': 0, 'total': 0})
         total_slots = stats['total'] or lot.get('capacity') or 0
         occupied = stats['occupied']
-        reserved = stats['reserved']
 
         if stats['total'] == 0 and total_slots:
-            available = total_slots - occupied - reserved
+            available = total_slots - occupied
             stats['available'] = max(available, 0)
 
         overall_total += total_slots
@@ -165,15 +163,14 @@ def summarize_lot_status(lots, slots):
 
         occupancy_percent = pct(occupied, total_slots)
         red_pct = pct(occupied, total_slots)
-        yellow_pct = pct(reserved, total_slots)
-        green_pct = max(0, 100 - red_pct - yellow_pct)
+        green_pct = max(0, 100 - red_pct)
 
         lot_status.append({
             'code': lot.get('code') or lot.get('name') or 'Lot',
             'name': lot.get('name') or lot.get('code') or 'Parking Lot',
+            'total_slots': total_slots,
             'occupancy_percent': occupancy_percent,
             'segment_red': red_pct,
-            'segment_yellow': yellow_pct,
             'segment_green': green_pct,
         })
 
@@ -457,51 +454,87 @@ class DashboardView(View):
                 'zone': zone,
             })
 
-        # Weekly occupancy (average per day)
-        weekly_start = start_of_day - timedelta(days=6)
+        # Daily Usage (Last 30 Days) - same as Advanced Reports
+        daily_start = now - timedelta(days=29)  # Last 30 days from now
+        daily_data = defaultdict(int)
+        
         try:
-            occ_resp = (
-                supabase.table('daily_occupancy')
-                .select('date, occupancy_percentage')
-                .gte('date', weekly_start.date().isoformat())
-                .order('date', ascending=True)
+            # Get all records for the last 30 days (don't filter by action in query, filter in Python)
+            daily_entries_resp = (
+                supabase.table('entries_exits')
+                .select('time, action')
+                .gte('time', daily_start.isoformat())
+                .order('time', ascending=True)
                 .execute()
             )
-            occ_rows = occ_resp.data or []
-        except Exception:
-            occ_rows = []
-
-        daily_totals = defaultdict(lambda: {'sum': 0, 'count': 0})
-        for row in occ_rows:
-            date_val = row.get('date')
-            if not date_val:
-                continue
-            day_key = date_val[:10]
-            pct_val = row.get('occupancy_percentage') or 0
-            daily_totals[day_key]['sum'] += pct_val
-            daily_totals[day_key]['count'] += 1
-
-        weekly_occupancy = []
-        for day_key in sorted(daily_totals.keys()):
-            data = daily_totals[day_key]
-            avg = data['sum'] / data['count'] if data['count'] else 0
-            try:
-                label = datetime.strptime(day_key, '%Y-%m-%d').strftime('%b %d')
-            except ValueError:
-                label = day_key
-            val = round(avg, 1)
-            weekly_occupancy.append({
-                'label': label,
-                'value': val,
-                'available': max(0, 100 - val),
-            })
-
-        if not weekly_occupancy:
-            weekly_occupancy = [{
-                'label': now.strftime('%b %d'),
-                'value': overall_occupancy_pct,
-                'available': max(0, 100 - overall_occupancy_pct),
-            }]
+            all_records = daily_entries_resp.data or []
+            
+            # Filter for entries only (case-insensitive)
+            daily_entries_list = [
+                row for row in all_records 
+                if row.get('action', '').lower() in ('entry', 'enter', 'check-in', 'check_in', 'in') or not row.get('action')
+            ]
+            
+            print(f"DEBUG Dashboard: Found {len(all_records)} total records, {len(daily_entries_list)} entry records")
+            
+            # Count entries per day - same logic as Advanced Reports
+            for row in daily_entries_list:
+                time_str = row.get('time')
+                if not time_str:
+                    continue
+                try:
+                    # Parse timestamp - same as Advanced Reports
+                    entry_dt = datetime.fromisoformat(time_str.replace('Z', '+00:00'))
+                    day_key = entry_dt.strftime('%b %d')
+                    daily_data[day_key] += 1
+                except Exception as e:
+                    print(f"DEBUG Dashboard: Error parsing {time_str}: {e}")
+                    continue
+            
+            print(f"DEBUG Dashboard: Daily data dict: {dict(daily_data)}")
+        except Exception as e:
+            print(f"DEBUG Dashboard: Error fetching entries: {e}")
+            import traceback
+            print(traceback.format_exc())
+            pass
+        
+        # Format for chart - same as Advanced Reports
+        import json
+        # Get last 30 items from dictionary (they should be in chronological order if we process them in order)
+        daily_items = list(daily_data.items())
+        if daily_items:
+            # Sort by the date string to ensure chronological order
+            # Convert "Dec 02" to sortable format
+            def sort_key(item):
+                label = item[0]
+                try:
+                    # Try current year first
+                    dt = datetime.strptime(f"{label} {now.year}", '%b %d %Y')
+                    return dt
+                except:
+                    try:
+                        # Try previous year
+                        dt = datetime.strptime(f"{label} {now.year - 1}", '%b %d %Y')
+                        return dt
+                    except:
+                        return datetime.min
+            
+            sorted_items = sorted(daily_items, key=sort_key)
+            last_30 = sorted_items[-30:] if len(sorted_items) > 30 else sorted_items
+            daily_labels = [d[0] for d in last_30]
+            daily_usage = [d[1] for d in last_30]
+        else:
+            # Generate last 30 days with zero values so chart still shows
+            daily_labels = []
+            daily_usage = []
+            for i in range(30):
+                day_date = now - timedelta(days=29-i)
+                daily_labels.append(day_date.strftime('%b %d'))
+                daily_usage.append(0)
+        
+        print(f"DEBUG Dashboard: Final - {len(daily_labels)} labels, {len(daily_usage)} usage values")
+        print(f"DEBUG Dashboard: Sample labels: {daily_labels[:5] if daily_labels else 'EMPTY'}")
+        print(f"DEBUG Dashboard: Sample usage: {daily_usage[:5] if daily_usage else 'EMPTY'}")
 
         context = {
             'role': role_name,
@@ -516,7 +549,8 @@ class DashboardView(View):
             'total_exits': total_exits,
             'overall_occupancy_pct': overall_occupancy_pct,
             'recent_activity': recent_activity,
-            'weekly_occupancy': weekly_occupancy,
+            'daily_labels': json.dumps(daily_labels),
+            'daily_usage': json.dumps(daily_usage),
         }
         return render(request, 'dashboard.html', context)
 
