@@ -947,10 +947,10 @@
 
         <!-- Right Column -->
         <div class="card">
-          <h4><span class="card-icon"><i class="fas fa-calendar-alt"></i></span> Daily Usage</h4>
-          <div class="sub">Last 30 Days</div>
+          <h4><span class="card-icon"><i class="fas fa-calendar-alt"></i></span> Peak Parking Times (weekly)</h4>
+          <div class="sub">{{ week_period|default:"Last 7 Days" }}</div>
           <div class="chart-container" style="height: 250px; margin-top: 16px;">
-            <canvas id="dailyUsageChart"></canvas>
+            <canvas id="peakTimesChart"></canvas>
           </div>
         </div>
       </div>
@@ -1033,45 +1033,174 @@
     }
   };
 
-  // Daily Usage Chart
-  const dailyCtx = document.getElementById('dailyUsageChart');
-  if (dailyCtx) {
-    const dailyLabels = {{ daily_labels|safe }};
-    const dailyUsage = {{ daily_usage|safe }};
+  // Peak Parking Times Chart (Weekly)
+  const peakCtx = document.getElementById('peakTimesChart');
+  if (peakCtx) {
+    const peakLabelsRaw = {{ peak_labels|safe }};
+    const peakValuesRaw = {{ peak_values|safe }};
     
-    console.log('Daily Usage Chart Data:', { labels: dailyLabels, usage: dailyUsage });
+    console.log('Peak Parking Times Chart Raw Data:', { labels: peakLabelsRaw, values: peakValuesRaw });
+    console.log('Peak Labels type:', typeof peakLabelsRaw, 'isArray:', Array.isArray(peakLabelsRaw));
+    console.log('Peak Values type:', typeof peakValuesRaw, 'isArray:', Array.isArray(peakValuesRaw));
     
-    // Ensure we have valid arrays
-    const labels = Array.isArray(dailyLabels) && dailyLabels.length > 0 ? dailyLabels : ['No Data'];
-    const usage = Array.isArray(dailyUsage) && dailyUsage.length > 0 ? dailyUsage : [0];
+    // Parse JSON strings if needed, or use arrays directly
+    let labels, values;
     
-    new Chart(dailyCtx, {
+    if (Array.isArray(peakLabelsRaw)) {
+      labels = peakLabelsRaw;
+    } else if (typeof peakLabelsRaw === 'string') {
+      try {
+        labels = JSON.parse(peakLabelsRaw);
+      } catch (e) {
+        console.error('Error parsing peakLabels:', e);
+        labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      }
+    } else {
+      labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    }
+    
+    if (Array.isArray(peakValuesRaw)) {
+      values = peakValuesRaw;
+    } else if (typeof peakValuesRaw === 'string') {
+      try {
+        values = JSON.parse(peakValuesRaw);
+      } catch (e) {
+        console.error('Error parsing peakValues:', e);
+        values = [0, 0, 0, 0, 0, 0];
+      }
+    } else {
+      values = [0, 0, 0, 0, 0, 0];
+    }
+    
+    // Ensure we have exactly 6 values for Mon-Sat
+    if (!Array.isArray(labels) || labels.length === 0) {
+      // Generate default date labels for last 7 days
+      const today = new Date();
+      labels = [];
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        labels.push(`${monthNames[date.getMonth()]} ${String(date.getDate()).padStart(2, '0')}`);
+      }
+    }
+    if (!Array.isArray(values) || values.length === 0) {
+      values = [0, 0, 0, 0, 0, 0, 0];
+    }
+    
+    // Pad arrays to ensure 7 elements (7 days)
+    while (labels.length < 7) {
+      const today = new Date();
+      const date = new Date(today);
+      date.setDate(date.getDate() - (7 - labels.length));
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      labels.push(`${monthNames[date.getMonth()]} ${String(date.getDate()).padStart(2, '0')}`);
+    }
+    while (values.length < 7) {
+      values.push(0);
+    }
+    
+    // Trim to 7 elements if more
+    labels = labels.slice(0, 7);
+    values = values.slice(0, 7);
+    
+    console.log('Final chart data:', { labels, values });
+    
+    new Chart(peakCtx, {
       type: 'bar',
       data: {
         labels: labels,
         datasets: [{
-          label: 'Daily Sessions',
-          data: usage,
-          backgroundColor: colors.secondary,
+          label: 'Peak Parking Times',
+          data: values,
+          backgroundColor: (ctx) => {
+            const value = ctx.parsed ? ctx.parsed.y : 0;
+            const maxValue = Math.max(...values.filter(v => !isNaN(v) && isFinite(v)), 0);
+            if (maxValue === 0 || value === 0) {
+              return 'rgb(220, 180, 180)'; // Light color for zero values
+            }
+            // Create gradient from lighter beige/pink to darker reddish-brown
+            const intensity = value / maxValue;
+            // Gradient: lighter (220, 180, 180) to darker (139, 69, 19)
+            const r = Math.floor(220 - (intensity * 81));  // 220 -> 139
+            const g = Math.floor(180 - (intensity * 111)); // 180 -> 69
+            const b = Math.floor(180 - (intensity * 161)); // 180 -> 19
+            return `rgb(${r}, ${g}, ${b})`;
+          },
           borderRadius: 4,
-          barThickness: 12
+          barThickness: 8,  // Thinner bars for smaller card
+          maxBarThickness: 10
         }]
       },
       options: {
         ...commonOptions,
+        plugins: {
+          ...commonOptions.plugins,
+          tooltip: {
+            ...commonOptions.plugins.tooltip,
+            callbacks: {
+              label: function(context) {
+                return `Peak: ${context.parsed.y} entries`;
+              }
+            }
+          },
+          afterDraw: function(chart) {
+            // Draw data labels on top of bars
+            const ctx = chart.ctx;
+            const yScale = chart.scales.y;
+            
+            chart.data.datasets.forEach((dataset, i) => {
+              const meta = chart.getDatasetMeta(i);
+              meta.data.forEach((bar, index) => {
+                const value = dataset.data[index];
+                if (value !== undefined && value !== null && !isNaN(value)) {
+                  const x = bar.x;
+                  const y = bar.y;
+                  
+                  // Calculate label position - above the bar
+                  let labelY;
+                  if (value === 0) {
+                    // For zero values, show label at a small offset from the bottom
+                    labelY = yScale.bottom - 5;
+                  } else {
+                    // For non-zero values, show label above the bar
+                    labelY = y - 8;
+                  }
+                  
+                  ctx.save();
+                  ctx.textAlign = 'center';
+                  ctx.textBaseline = 'bottom';
+                  ctx.font = '600 11px Space Grotesk';
+                  ctx.fillStyle = '#111827';
+                  ctx.fillText(value.toString(), x, labelY);
+                  ctx.restore();
+                }
+              });
+            });
+          }
+        },
         scales: {
           y: {
             beginAtZero: true,
+            min: 0,
             grid: { color: 'rgba(0,0,0,0.05)' },
-            ticks: { font: { family: 'JetBrains Mono' } }
+            ticks: { 
+              font: { family: 'JetBrains Mono' },
+              precision: 0,
+              stepSize: 1
+            }
           },
           x: {
             grid: { display: false },
             ticks: { 
-              font: { family: 'Space Grotesk', size: 10 },
-              maxRotation: 45,
-              minRotation: 45
+              font: { family: 'Space Grotesk', size: 11 }
             }
+          }
+        },
+        animation: {
+          onComplete: function() {
+            // Trigger redraw to show labels
+            this.chart.draw();
           }
         }
       }

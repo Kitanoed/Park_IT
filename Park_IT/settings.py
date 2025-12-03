@@ -112,7 +112,7 @@ SUPABASE_ANON_KEY = os.getenv('SUPABASE_ANON_KEY')
 
 # Internationalization
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Singapore'  # GMT+8 timezone
 USE_I18N = True
 USE_TZ = True
 

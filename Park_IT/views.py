@@ -401,10 +401,15 @@ class DashboardView(View):
             messages.error(request, 'Access denied. Admins only.')
             return redirect('user_dashboard')
 
-        now = timezone.now()
-        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        # Get current time and convert to local timezone (GMT+8) for all date calculations
+        now = timezone.now()  # This is UTC
+        local_now = timezone.localtime(now)  # Convert to TIME_ZONE (GMT+8/Asia/Singapore)
+        # Use local timezone for all date calculations
+        start_of_day = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
         end_of_day = start_of_day + timedelta(days=1)
-        summary_date = now.strftime('%m/%d/%Y')
+        summary_date = local_now.strftime('%m/%d/%Y')
+        
+        print(f"DEBUG Dashboard: UTC time: {now}, Local time (GMT+8): {local_now}, Date: {summary_date}")
 
         def parse_timestamp(ts_value):
             if not ts_value:
@@ -474,87 +479,118 @@ class DashboardView(View):
                 'zone': zone,
             })
 
-        # Daily Usage (Last 30 Days) - same as Advanced Reports
-        daily_start = now - timedelta(days=29)  # Last 30 days from now
-        daily_data = defaultdict(int)
+        # Weekly Peak Parking Times - Calculate total entries per actual date
+        # Get entries from the last 7 days (one week) from entries_exits table
+        # Always use current local date - this ensures dashboard updates when date changes
+        import json
+        # Use local_now that was already calculated above
+        # Calculate week range: last 7 days ending with TODAY (local date)
+        # Get today's date at midnight in local timezone
+        today_midnight = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+        week_start_date = today_midnight - timedelta(days=6)  # 7 days ago at midnight
+        week_end_date = local_now  # Current local time (today)
+        
+        peak_times_data = defaultdict(int)  # date_string -> total count
+        week_period = f"{week_start_date.strftime('%m/%d/%Y')} - {week_end_date.strftime('%m/%d/%Y')}"
         
         try:
-            # Get all records for the last 30 days (don't filter by action in query, filter in Python)
-            daily_entries_resp = (
+            # Convert week_start_date to UTC for comparison (Supabase stores in UTC)
+            # Query from 7 days ago at midnight (local time) converted to UTC
+            if week_start_date.tzinfo is None:
+                week_start_utc = week_start_date.replace(tzinfo=dt_timezone.utc)
+            else:
+                week_start_utc = week_start_date.astimezone(dt_timezone.utc)
+            
+            # Also get end of today in UTC for the query range
+            end_of_today_local = local_now.replace(hour=23, minute=59, second=59, microsecond=999999)
+            if end_of_today_local.tzinfo is None:
+                end_of_today_utc = end_of_today_local.replace(tzinfo=dt_timezone.utc)
+            else:
+                end_of_today_utc = end_of_today_local.astimezone(dt_timezone.utc)
+            
+            week_start_iso = week_start_utc.isoformat()
+            week_end_iso = end_of_today_utc.isoformat()
+            print(f"DEBUG Dashboard: Querying entries_exits from {week_start_iso} to {week_end_iso} (local: {week_start_date.strftime('%Y-%m-%d')} to {local_now.strftime('%Y-%m-%d')})")
+            
+            # Get all entry records for the last week - filter by action='entry' directly in query
+            # Query from 7 days ago to end of today (in UTC)
+            weekly_entries_resp = (
                 supabase.table('entries_exits')
                 .select('time, action')
-                .gte('time', daily_start.isoformat())
-                .order('time', ascending=True)
+                .eq('action', 'entry')  # Filter for entry actions only
+                .gte('time', week_start_iso)
+                .lte('time', week_end_iso)  # Up to end of today
+                .order('time')  # Ascending order (default)
                 .execute()
             )
-            all_records = daily_entries_resp.data or []
+            entry_records = weekly_entries_resp.data or []
             
-            # Filter for entries only (case-insensitive)
-            daily_entries_list = [
-                row for row in all_records 
-                if row.get('action', '').lower() in ('entry', 'enter', 'check-in', 'check_in', 'in') or not row.get('action')
-            ]
+            print(f"DEBUG Dashboard: Found {len(entry_records)} entry records from entries_exits table for weekly peak")
             
-            print(f"DEBUG Dashboard: Found {len(all_records)} total records, {len(daily_entries_list)} entry records")
+            # If no records in last 7 days, try getting all entries to test the query
+            if len(entry_records) == 0:
+                print("DEBUG Dashboard: No entries in last 7 days, checking if there are any entries at all...")
+                all_entries_test = supabase.table('entries_exits').select('time, action').eq('action', 'entry').limit(10).execute()
+                print(f"DEBUG Dashboard: Total entries in table (sample): {len(all_entries_test.data or [])}")
             
-            # Count entries per day - same logic as Advanced Reports
-            for row in daily_entries_list:
+            # Count total entries per day of week using the time column (timestamptz)
+            for row in entry_records:
                 time_str = row.get('time')
                 if not time_str:
                     continue
                 try:
-                    # Parse timestamp - same as Advanced Reports
-                    entry_dt = datetime.fromisoformat(time_str.replace('Z', '+00:00'))
-                    day_key = entry_dt.strftime('%b %d')
-                    daily_data[day_key] += 1
+                    # Parse timestamptz from time column
+                    # Handle both 'Z' and timezone offset formats
+                    if time_str.endswith('Z'):
+                        time_str_clean = time_str.replace('Z', '+00:00')
+                    else:
+                        time_str_clean = time_str
+                    
+                    entry_dt = datetime.fromisoformat(time_str_clean)
+                    
+                    # Ensure timezone-aware datetime
+                    if entry_dt.tzinfo is None:
+                        entry_dt = entry_dt.replace(tzinfo=dt_timezone.utc)
+                    
+                    # Convert to local timezone for date grouping
+                    local_dt = entry_dt.astimezone(timezone.get_current_timezone())
+                    
+                    # Get date string in format "Dec 03" for the label
+                    date_key = local_dt.strftime('%b %d')
+                    # Count total entries for this date
+                    peak_times_data[date_key] += 1
+                    print(f"DEBUG Dashboard: Entry on date {date_key} (time: {time_str})")
                 except Exception as e:
-                    print(f"DEBUG Dashboard: Error parsing {time_str}: {e}")
+                    print(f"DEBUG Dashboard: Error parsing time '{time_str}': {e}")
+                    import traceback
+                    print(traceback.format_exc())
                     continue
             
-            print(f"DEBUG Dashboard: Daily data dict: {dict(daily_data)}")
+            print(f"DEBUG Dashboard: Peak times data (date -> count): {dict(peak_times_data)}")
         except Exception as e:
-            print(f"DEBUG Dashboard: Error fetching entries: {e}")
+            print(f"DEBUG Dashboard: Error fetching weekly entries from entries_exits: {e}")
             import traceback
             print(traceback.format_exc())
-            pass
         
-        # Format for chart - same as Advanced Reports
-        import json
-        # Get last 30 items from dictionary (they should be in chronological order if we process them in order)
-        daily_items = list(daily_data.items())
-        if daily_items:
-            # Sort by the date string to ensure chronological order
-            # Convert "Dec 02" to sortable format
-            def sort_key(item):
-                label = item[0]
-                try:
-                    # Try current year first
-                    dt = datetime.strptime(f"{label} {now.year}", '%b %d %Y')
-                    return dt
-                except:
-                    try:
-                        # Try previous year
-                        dt = datetime.strptime(f"{label} {now.year - 1}", '%b %d %Y')
-                        return dt
-                    except:
-                        return datetime.min
-            
-            sorted_items = sorted(daily_items, key=sort_key)
-            last_30 = sorted_items[-30:] if len(sorted_items) > 30 else sorted_items
-            daily_labels = [d[0] for d in last_30]
-            daily_usage = [d[1] for d in last_30]
-        else:
-            # Generate last 30 days with zero values so chart still shows
-            daily_labels = []
-            daily_usage = []
-            for i in range(30):
-                day_date = now - timedelta(days=29-i)
-                daily_labels.append(day_date.strftime('%b %d'))
-                daily_usage.append(0)
+        # Generate labels and values for the last 7 days (actual dates)
+        # Use local timezone for date labels
+        peak_labels = []
+        peak_values = []
         
-        print(f"DEBUG Dashboard: Final - {len(daily_labels)} labels, {len(daily_usage)} usage values")
-        print(f"DEBUG Dashboard: Sample labels: {daily_labels[:5] if daily_labels else 'EMPTY'}")
-        print(f"DEBUG Dashboard: Sample usage: {daily_usage[:5] if daily_usage else 'EMPTY'}")
+        # Create date range for last 7 days using local timezone
+        # Always generate labels for the last 7 days ending with TODAY
+        for i in range(7):
+            # Calculate date: 6 days ago, 5 days ago, ..., today
+            date = today_midnight - timedelta(days=(6 - i))
+            # Format as "Dec 04" etc.
+            date_label = date.strftime('%b %d')
+            peak_labels.append(date_label)
+            # Get count for this date, or 0 if no entries
+            count = peak_times_data.get(date_label, 0)
+            peak_values.append(count)
+            print(f"DEBUG Dashboard: {date_label}: {count} entries (date: {date.strftime('%Y-%m-%d')})")
+        
+        print(f"DEBUG Dashboard: Final - Peak labels: {peak_labels}, Peak values: {peak_values}")
 
         context = {
             'role': role_name,
@@ -569,8 +605,9 @@ class DashboardView(View):
             'total_exits': total_exits,
             'overall_occupancy_pct': overall_occupancy_pct,
             'recent_activity': recent_activity,
-            'daily_labels': json.dumps(daily_labels),
-            'daily_usage': json.dumps(daily_usage),
+            'peak_labels': json.dumps(peak_labels),
+            'peak_values': json.dumps(peak_values),
+            'week_period': week_period,
         }
         return render(request, 'dashboard.html', context)
 
