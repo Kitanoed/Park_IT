@@ -19,22 +19,22 @@
   body {
     background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%);
     font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
-    min-height: 100vh;
     margin: 0;
+    min-height: 100vh;
   }
 
   .container {
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: calc(100vh - 80px);
-    padding: 40px 20px;
+    min-height: 100vh;
+    padding: 20px;
   }
 
   .login-card {
     max-width: 520px;
     width: 100%;
-    padding: 40px;
+    padding: 32px 36px;
     border-radius: 24px;
     background: var(--surface);
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -56,8 +56,8 @@
     display: flex;
     align-items: center;
     gap: 14px;
-    margin-bottom: 32px;
-    padding-bottom: 24px;
+    margin-bottom: 24px;
+    padding-bottom: 20px;
     border-bottom: 1px solid var(--border);
   }
 
@@ -82,10 +82,14 @@
     letter-spacing: 1px;
   }
 
+  .text-center {
+    text-align: center;
+  }
+
   .welcome-title {
     font-size: 28px;
     font-weight: 700;
-    margin-bottom: 8px;
+    margin: 0 0 6px;
     color: var(--text);
     letter-spacing: -0.5px;
   }
@@ -93,26 +97,83 @@
   .welcome-subtitle {
     color: var(--muted);
     font-size: 15px;
-    margin-bottom: 32px;
+    margin: 0 0 24px;
     line-height: 1.5;
   }
 
-  /* Form Styling */
-  form {
-    margin-bottom: 24px;
+  /* Alert Messages */
+  .messagelist {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 20px;
   }
 
-  /* Grid for name fields */
-  .grid-2 {
+  .messagelist li {
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .messagelist .error, .messagelist .danger {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+  }
+
+  .messagelist .success {
+    background: #ecfdf5;
+    border: 1px solid #bbf7d0;
+    color: #166534;
+  }
+
+  /* Form Grid Layout */
+  form {
+    margin-bottom: 20px;
+  }
+
+  .form-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 16px;
   }
 
-  @media (max-width: 480px) {
-    .grid-2 {
-      grid-template-columns: 1fr;
-    }
+  .form-group {
+    margin: 0;
+  }
+
+  .form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .form-group input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 15px;
+    color: var(--text);
+    background: #fafbfc;
+    font-family: inherit;
+    transition: all 0.2s;
+    box-sizing: border-box;
+  }
+
+  .form-group input:focus {
+    outline: none;
+    border-color: var(--brand-red);
+    background: var(--surface);
+    box-shadow: 0 0 0 4px rgba(183, 28, 28, 0.1);
+  }
+
+  .form-group input::placeholder {
+    color: #9ca3af;
   }
 
   .btn-signin {
@@ -130,6 +191,7 @@
     box-shadow: 0 4px 15px rgba(183, 28, 28, 0.3);
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    margin-top: 8px;
   }
 
   .btn-signin:hover {
@@ -159,90 +221,16 @@
     opacity: 0.8;
   }
 
-  /* Django Messages */
-  .messagelist {
-    list-style: none;
-    padding: 0;
-    margin: 0 0 24px;
-  }
+  /* Hide crispy forms default rendering */
+  .asteriskField { display: none; }
 
-  .messagelist li {
-    padding: 14px 18px;
-    border-radius: 12px;
-    margin-bottom: 10px;
-    font-size: 14px;
-    font-weight: 500;
-  }
-
-  .messagelist .error, .messagelist .danger {
-    background: #fef2f2;
-    border: 1px solid #fecaca;
-    color: #991b1b;
-  }
-
-  .messagelist .success {
-    background: #ecfdf5;
-    border: 1px solid #bbf7d0;
-    color: #166534;
-  }
-
-  /* Crispy Forms Override */
-  .asteriskField {
-    display: none;
-  }
-
-  div[id^="div_id_"] {
-    margin-bottom: 20px;
-  }
-
-  div[id^="div_id_"] label {
-    display: block;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text);
-    margin-bottom: 8px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  input.form-control, select.form-control {
-    width: 100%;
-    padding: 14px 16px;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    font-size: 15px;
-    color: var(--text);
-    background: #fafbfc;
-    font-family: inherit;
-    transition: all 0.2s;
-  }
-
-  input.form-control:focus, select.form-control:focus {
-    outline: none;
-    border-color: var(--brand-red);
-    background: var(--surface);
-    box-shadow: 0 0 0 4px rgba(183, 28, 28, 0.1);
-  }
-
-  .invalid-feedback, .errorlist {
-    color: #dc2626;
-    font-size: 13px;
-    margin-top: 6px;
-    list-style: none;
-    padding: 0;
-  }
-
-  #hint_id_password1, #hint_id_password2 {
-    font-size: 12px;
-    color: var(--muted);
-    margin-top: 6px;
-  }
-
-  @media (max-width: 576px) {
-    .login-card {
-      padding: 32px 24px;
+  @media (max-width: 540px) {
+    .form-grid {
+      grid-template-columns: 1fr;
     }
-
+    .login-card {
+      padding: 28px 24px;
+    }
     .welcome-title {
       font-size: 24px;
     }
@@ -274,7 +262,32 @@
 
     <form method="POST" action="{% url 'register' %}" novalidate>
       {% csrf_token %}
-      {{ form|crispy }}
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="id_first_name">First Name</label>
+          <input type="text" name="first_name" id="id_first_name" required maxlength="100" value="{{ form.first_name.value|default:'' }}">
+        </div>
+        <div class="form-group">
+          <label for="id_last_name">Last Name</label>
+          <input type="text" name="last_name" id="id_last_name" required maxlength="100" value="{{ form.last_name.value|default:'' }}">
+        </div>
+        <div class="form-group">
+          <label for="id_email">Email</label>
+          <input type="email" name="email" id="id_email" required value="{{ form.email.value|default:'' }}">
+        </div>
+        <div class="form-group">
+          <label for="id_student_id">Student/Employee ID</label>
+          <input type="text" name="student_id" id="id_student_id" required maxlength="20" value="{{ form.student_id.value|default:'' }}">
+        </div>
+        <div class="form-group">
+          <label for="id_password1">Password</label>
+          <input type="password" name="password1" id="id_password1" required>
+        </div>
+        <div class="form-group">
+          <label for="id_password2">Confirm Password</label>
+          <input type="password" name="password2" id="id_password2" required>
+        </div>
+      </div>
       <button type="submit" class="btn btn-signin">Create Account</button>
     </form>
 

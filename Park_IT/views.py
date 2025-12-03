@@ -277,27 +277,18 @@ class RegisterView(View):
             messages.error(request, 'Passwords do not match.')
             return render(request, 'register.html', {'form': form})
 
-        # === Supabase Sign-Up with Retry Logic ===
-        max_attempts = 3
-        response = None
-        for attempt in range(max_attempts):
+        # === Supabase Sign-Up ===
+        try:
             response = supabase.auth.sign_up({
                 "email": data['email'],
                 "password": data['password1']
             })
+        except Exception as auth_error:
+            error_msg = str(auth_error)
+            messages.error(request, f'Sign-up failed: {error_msg}')
+            return render(request, 'register.html', {'form': form})
 
-            if response.user:
-                break
-            elif response.error:
-                error_msg = str(response.error.message)
-                if "Too Many Requests" in error_msg or "after" in error_msg:
-                    if attempt < max_attempts - 1:
-                        time.sleep(60)
-                        continue
-                messages.error(request, response.error.message or 'Sign-up failed.')
-                return render(request, 'register.html', {'form': form})
-
-        # === If sign-up failed after retries ===
+        # === If sign-up failed ===
         if not response.user:
             messages.error(request, 'Sign-up failed. Please try again later.')
             return render(request, 'register.html', {'form': form})
@@ -321,7 +312,7 @@ class RegisterView(View):
 
             messages.success(
                 request,
-                'Account created successfully! Please check your email for confirmation.'
+                'Account created successfully!'
             )
 
             # Redirect to unified login page
