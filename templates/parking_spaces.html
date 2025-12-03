@@ -676,7 +676,10 @@
         <button class="btn-save" id="checkInBtn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">Check-In</button>
         <button class="btn-save" id="checkOutBtn" style="background: linear-gradient(135deg, #e53935 0%, #b91c1c 100%);">Check-Out</button>
       </div>
-      <button class="btn-save" id="saveChanges">Save Changes</button>
+      <div style="display: flex; gap: 10px;">
+        <button class="btn-save" id="deleteSlotBtn" style="background: linear-gradient(135deg, #6b7280 0%, #374151 100%); padding: 12px 14px;" title="Delete Slot Permanently">🗑️</button>
+        <button class="btn-save" id="saveChanges">Save Changes</button>
+      </div>
     </div>
   </div>
 </div>
@@ -915,6 +918,42 @@
         }
       })
       .catch(() => showNotification('Error refreshing', 'error'));
+  });
+
+  // Delete Slot
+  document.getElementById('deleteSlotBtn').addEventListener('click', () => {
+    if (!activeSlot) return;
+    
+    const slotId = activeSlot.dataset.slotId;
+    const slotNumber = document.getElementById('slotNumber').textContent;
+    
+    if (!confirm(`Are you sure you want to PERMANENTLY DELETE Slot ${slotNumber}?\n\nThis action cannot be undone.`)) {
+      return;
+    }
+    
+    fetch(`/api/parking-slots/${slotId}/delete/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCSRFToken(),
+        'Content-Type': 'application/json',
+      }
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        showNotification(data.message || 'Slot deleted successfully', 'success');
+        slotModal.classList.remove('show');
+        // Remove the slot from the grid
+        if (activeSlot) {
+          activeSlot.remove();
+        }
+        // Refresh the page after a short delay to update counts
+        setTimeout(() => location.reload(), 1500);
+      } else {
+        showNotification(data.error || 'Failed to delete slot', 'error');
+      }
+    })
+    .catch(e => showNotification(e.message || 'Error deleting slot', 'error'));
   });
 </script>
 {% endblock %}

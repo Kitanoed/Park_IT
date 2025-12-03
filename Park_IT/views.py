@@ -86,7 +86,16 @@ def build_lot_display(lots, slots, selected_lot_id=None):
         current_lot['is_active'] = True
 
     current_slots_raw = slots_by_lot.get(selected_lot_id, [])
-    current_slots_raw.sort(key=lambda s: (s.get('slot_number') is None, s.get('slot_number')))
+    # Sort numerically - convert slot_number to int for proper ordering
+    def get_slot_sort_key(s):
+        slot_num = s.get('slot_number')
+        if slot_num is None:
+            return (True, 0)
+        try:
+            return (False, int(slot_num))
+        except (ValueError, TypeError):
+            return (False, 0)
+    current_slots_raw.sort(key=get_slot_sort_key)
 
     counts = {'available': 0, 'occupied': 0, 'reserved': 0, 'unavailable': 0}
     slots_display = []
@@ -858,9 +867,7 @@ class ParkingSpacesView(View):
             return redirect('user_dashboard')
 
         lots, all_slots = fetch_parking_data()
-        if not lots or not all_slots:
-            if self._seed_default_layout():
-                lots, all_slots = fetch_parking_data()
+        # Use only existing slots from database - do not auto-create
 
         lot_options, current_lot, slots_display, filled_count, available_count, selected_lot_id = build_lot_display(
             lots, all_slots, request.GET.get('lot')
@@ -2661,6 +2668,52 @@ def get_slot_details(request, slot_id):
         
     except Exception as e:
         return JsonResponse({'error': f'Failed to get slot details: {str(e)}'}, status=500)
+
+
+@require_POST
+def delete_parking_slot(request, slot_id):
+    """
+    API Endpoint: Permanently delete a parking slot from the database
+    Only admins can delete slots.
+    """
+    if 'access_token' not in request.session:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    
+    try:
+        # Verify user is admin
+        user_id = request.session.get('user_id')
+        user_resp = supabase.table('users').select('role').eq('id', user_id).execute()
+        
+        if not user_resp.data:
+            return JsonResponse({'error': 'User not found'}, status=404)
+        
+        raw_role = user_resp.data[0].get('role') or 'user'
+        role_name = str(raw_role).strip().lower() if raw_role else 'user'
+        
+        if role_name != 'admin':
+            return JsonResponse({'error': 'Admin privileges required'}, status=403)
+        
+        # Get slot info before deletion
+        slot_resp = supabase.table('parking_slot').select('id, slot_number, lot_id').eq('id', slot_id).execute()
+        
+        if not slot_resp.data:
+            return JsonResponse({'error': 'Slot not found'}, status=404)
+        
+        slot_info = slot_resp.data[0]
+        slot_number = slot_info.get('slot_number')
+        
+        # Delete the slot
+        delete_resp = supabase.table('parking_slot').delete().eq('id', slot_id).execute()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Slot {slot_number} has been permanently deleted',
+            'deleted_slot_id': slot_id,
+            'deleted_slot_number': slot_number
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': f'Failed to delete slot: {str(e)}'}, status=500)
 
 
 class AdvancedReportsView(View):

@@ -9,7 +9,7 @@ from .views import (
     UserParkingSpacesView, UnifiedLoginView, update_user_role, AdminParkingHistoryView,
     parking_history_api, ProfileForUsersView, reset_user_password, ChangePasswordView,
     AdminResetPasswordView, handle_check_in, handle_check_out, get_slot_details,
-    AdvancedReportsView, export_parking_csv, monthly_report_api,
+    AdvancedReportsView, export_parking_csv, monthly_report_api, delete_parking_slot,
 )
 
 urlpatterns = [
@@ -59,6 +59,7 @@ urlpatterns = [
     path("api/parking-slots/<int:slot_id>/check-in/", handle_check_in, name="check_in"),
     path("api/parking-slots/<int:slot_id>/check-out/", handle_check_out, name="check_out"),
     path("api/parking-slots/<int:slot_id>/details/", get_slot_details, name="slot_details"),
+    path("api/parking-slots/<int:slot_id>/delete/", delete_parking_slot, name="delete_slot"),
 ]
 
 if settings.DEBUG:
