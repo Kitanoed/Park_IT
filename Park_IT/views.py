@@ -2280,6 +2280,75 @@ def handle_check_in(request, slot_id):
         # Normalize formatting for consistency
         license_plate = license_plate.strip().upper()
         
+        # Validation: Check if this license plate is already in an active parking session
+        try:
+            # First, find the vehicle by license plate (case-insensitive)
+            vehicle_check = supabase.table('vehicle').select('id').ilike('plate', license_plate).execute()
+            
+            # If not found with ilike, try exact match
+            if not vehicle_check.data or len(vehicle_check.data) == 0:
+                vehicle_check = supabase.table('vehicle').select('id').eq('plate', license_plate).execute()
+            
+            if vehicle_check.data and len(vehicle_check.data) > 0:
+                vehicle_id_check = vehicle_check.data[0]['id']
+                
+                # Check if there's an active entry without a corresponding exit
+                # Get all entry records for this vehicle
+                entry_records = supabase.table('entries_exits').select(
+                    'id, time, action'
+                ).eq('vehicle_id', vehicle_id_check).eq('action', 'entry').order('time', desc=True).execute()
+                
+                if entry_records.data:
+                    # For each entry, check if there's a corresponding exit
+                    for entry in entry_records.data:
+                        entry_time = entry.get('time')
+                        entry_id = entry.get('id')
+                        
+                        # Check if there's an exit record after this entry
+                        exit_check = supabase.table('entries_exits').select('id').eq(
+                            'vehicle_id', vehicle_id_check
+                        ).eq('action', 'exit').gte('time', entry_time).order('time').limit(1).execute()
+                        
+                        # If no exit found, this is an active session
+                        if not exit_check.data or len(exit_check.data) == 0:
+                            return JsonResponse({
+                                'error': f'License plate {license_plate} is already in an active parking session. Please check out the vehicle first.'
+                            }, status=400)
+            
+            # Also check if any slot is currently occupied with this license plate (case-insensitive)
+            # Try exact match first
+            occupied_slot_check = supabase.table('parking_slot').select(
+                'id, slot_number, lot_id'
+            ).eq('license_plate', license_plate).eq('status', 'occupied').execute()
+            
+            # If not found, try case-insensitive (if Supabase supports it for this column)
+            if not occupied_slot_check.data or len(occupied_slot_check.data) == 0:
+                try:
+                    # Try to get all occupied slots and filter in Python for case-insensitive match
+                    all_occupied = supabase.table('parking_slot').select(
+                        'id, slot_number, lot_id, license_plate'
+                    ).eq('status', 'occupied').execute()
+                    
+                    if all_occupied.data:
+                        for slot in all_occupied.data:
+                            slot_plate = (slot.get('license_plate') or '').strip().upper()
+                            if slot_plate == license_plate:
+                                occupied_slot_check.data = [slot]
+                                break
+                except Exception:
+                    pass  # If this fails, continue with the original check
+            
+            if occupied_slot_check.data and len(occupied_slot_check.data) > 0:
+                occupied_slot = occupied_slot_check.data[0]
+                slot_num = occupied_slot.get('slot_number', 'N/A')
+                return JsonResponse({
+                    'error': f'License plate {license_plate} is already checked in at slot {slot_num}. Please check out the vehicle first.'
+                }, status=400)
+                
+        except Exception as check_error:
+            # If check fails, log but don't block - might be a database issue
+            print(f"Warning: Could not verify duplicate license plate: {str(check_error)}")
+        
         # Get current slot status and lot_id in one query
         slot_resp = supabase.table('parking_slot').select('id, status, lot_id').eq('id', slot_id).execute()
         
