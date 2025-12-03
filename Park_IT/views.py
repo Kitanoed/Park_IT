@@ -1408,6 +1408,9 @@ class AddUserView(View):
     def post(self, request):
         current_user, role_name, redirect_response = self._require_admin(request)
         if redirect_response:
+            # Check if AJAX request
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.content_type == 'application/json':
+                return JsonResponse({'success': False, 'error': 'Please log in first.'}, status=401)
             return redirect_response
 
         roles = self._load_roles()
@@ -1425,14 +1428,23 @@ class AddUserView(View):
             'role': role_raw or '',
         }
 
+        # Check if this is an AJAX request
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
         if not first_name or not last_name or not username or not email or not role_raw:
-            messages.error(request, 'All fields are required.')
+            error_msg = 'All fields are required.'
+            if is_ajax:
+                return JsonResponse({'success': False, 'error': error_msg}, status=400)
+            messages.error(request, error_msg)
             return self._render_form(request, current_user, role_name, roles, form_values)
 
         # Normalize and validate role - only "user" or "admin" allowed
         normalized_role = str(role_raw).strip().lower() if role_raw else 'user'
         if normalized_role not in ['user', 'admin']:
-            messages.error(request, 'Invalid role. Must be "user" or "admin".')
+            error_msg = 'Invalid role. Must be "user" or "admin".'
+            if is_ajax:
+                return JsonResponse({'success': False, 'error': error_msg}, status=400)
+            messages.error(request, error_msg)
             return self._render_form(request, current_user, role_name, roles, form_values)
 
         try:
@@ -1463,12 +1475,18 @@ class AddUserView(View):
                     auth_user = getattr(signup_resp, "user", None)
                 except Exception as signup_err:
                     detail = admin_error or str(signup_err)
-                    messages.error(request, f'Failed to create auth user: {detail}')
+                    error_msg = f'Failed to create auth user: {detail}'
+                    if is_ajax:
+                        return JsonResponse({'success': False, 'error': error_msg}, status=500)
+                    messages.error(request, error_msg)
                     return self._render_form(request, current_user, role_name, roles, form_values)
 
             if not auth_user:
                 detail = admin_error or 'Unknown error from Supabase.'
-                messages.error(request, f'Failed to create auth user: {detail}')
+                error_msg = f'Failed to create auth user: {detail}'
+                if is_ajax:
+                    return JsonResponse({'success': False, 'error': error_msg}, status=500)
+                messages.error(request, error_msg)
                 return self._render_form(request, current_user, role_name, roles, form_values)
 
             # Insert into users profile table with role field (always lowercase)
@@ -1485,13 +1503,16 @@ class AddUserView(View):
                 'status': 'active',
             }).execute()
 
-            messages.success(
-                request,
-                'New user created successfully. Temporary password set to their username.',
-            )
+            success_msg = 'New user created successfully. Temporary password set to their username.'
+            if is_ajax:
+                return JsonResponse({'success': True, 'message': success_msg})
+            messages.success(request, success_msg)
             return redirect('manage_users')
         except Exception as e:
-            messages.error(request, f'Failed to create user: {str(e)}')
+            error_msg = f'Failed to create user: {str(e)}'
+            if is_ajax:
+                return JsonResponse({'success': False, 'error': error_msg}, status=500)
+            messages.error(request, error_msg)
             return self._render_form(request, current_user, role_name, roles, form_values)
 
 
@@ -2103,6 +2124,13 @@ class AdminResetPasswordView(View):
             target_user = target_user_response.data[0]
             form = AdminPasswordResetForm()
             
+            # Check if we just reset the password and need to show the temporary password
+            temp_password = None
+            temp_password_user = None
+            if 'temp_password' in request.session:
+                temp_password = request.session.pop('temp_password', None)
+                temp_password_user = request.session.pop('temp_password_user', None)
+            
             context = {
                 'form': form,
                 'target_user': target_user,
@@ -2112,6 +2140,8 @@ class AdminResetPasswordView(View):
                 'last_name': current_user['last_name'],
                 'email': current_user['email'],
                 'username': current_user['student_employee_id'],
+                'temp_password': temp_password,
+                'temp_password_user': temp_password_user,
             }
             return render(request, 'admin_reset_password.html', context)
             
@@ -2153,7 +2183,24 @@ class AdminResetPasswordView(View):
             form = AdminPasswordResetForm(request.POST)
             
             if form.is_valid():
-                new_password = form.cleaned_data['new_password']
+                # Generate a secure random password
+                import secrets
+                import string
+                
+                # Generate a secure password: 12 characters with mix of letters, digits, and symbols
+                alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+                # Ensure at least one of each type for security
+                password = (
+                    secrets.choice(string.ascii_lowercase) +
+                    secrets.choice(string.ascii_uppercase) +
+                    secrets.choice(string.digits) +
+                    secrets.choice("!@#$%^&*") +
+                    ''.join(secrets.choice(alphabet) for _ in range(8))  # 8 more random chars
+                )
+                # Shuffle to avoid predictable pattern
+                password_list = list(password)
+                secrets.SystemRandom().shuffle(password_list)
+                new_password = ''.join(password_list)
                 
                 # Update password using Supabase admin API
                 # This requires service role key to work
@@ -2204,8 +2251,10 @@ class AdminResetPasswordView(View):
                         )
                         
                         if update_resp.user:
-                            messages.success(request, f'Password reset successfully for {target_user.get("first_name", "")} {target_user.get("last_name", "")}.')
-                            return redirect('manage_users')
+                            # Store the temporary password in session to display once
+                            request.session['temp_password'] = new_password
+                            request.session['temp_password_user'] = f"{target_user.get('first_name', '')} {target_user.get('last_name', '')}"
+                            return redirect('admin_reset_password', user_id=user_id)
                         else:
                             messages.error(request, 'Password reset failed. User not found or update failed.')
                     except AttributeError as attr_err:
