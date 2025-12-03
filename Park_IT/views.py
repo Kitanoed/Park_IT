@@ -283,6 +283,26 @@ class RegisterView(View):
             messages.error(request, 'Passwords do not match.')
             return render(request, 'register.html', {'form': form})
 
+        # === Check if email already exists ===
+        try:
+            email_check = supabase.table('users').select('id').eq('email', data['email']).execute()
+            if email_check.data:
+                messages.error(request, 'An account with this email already exists.')
+                return render(request, 'register.html', {'form': form})
+        except Exception as e:
+            messages.error(request, f'Error checking email: {str(e)}')
+            return render(request, 'register.html', {'form': form})
+
+        # === Check if Student/Employee ID already exists ===
+        try:
+            id_check = supabase.table('users').select('id').eq('student_employee_id', data['student_id']).execute()
+            if id_check.data:
+                messages.error(request, 'An account with this Student/Employee ID already exists.')
+                return render(request, 'register.html', {'form': form})
+        except Exception as e:
+            messages.error(request, f'Error checking Student/Employee ID: {str(e)}')
+            return render(request, 'register.html', {'form': form})
+
         # === Supabase Sign-Up ===
         try:
             response = supabase.auth.sign_up({
@@ -2760,6 +2780,10 @@ class AdvancedReportsView(View):
 
         try:
             user_id = request.session.get('user_id')
+            if not user_id:
+                messages.error(request, 'Please log in first.')
+                return redirect('login')
+            
             user_response = supabase.table('users').select(
                 'first_name, last_name, email, student_employee_id, role'
             ).eq('id', user_id).execute()
@@ -2779,8 +2803,16 @@ class AdvancedReportsView(View):
                 messages.error(request, 'Access denied. Admins only.')
                 return redirect('user_dashboard')
 
+        except ValueError as e:
+            # Supabase credentials not configured
+            messages.error(request, 'Server configuration error. Please contact administrator.')
+            return redirect('home')
         except Exception as e:
-            messages.error(request, f'Error loading user: {str(e)}')
+            error_msg = str(e).lower()
+            if 'disconnect' in error_msg or 'connection' in error_msg or 'timeout' in error_msg or 'network' in error_msg:
+                messages.error(request, 'Connection error. Please refresh the page and try again.')
+            else:
+                messages.error(request, f'Error loading user: {str(e)}')
             return redirect('home')
 
         # Get filter parameters

@@ -197,6 +197,131 @@
   .profile-info .nm { font-weight: 600; font-size: 13px; color: var(--text); }
   .profile-info .em { font-size: 11px; color: var(--muted); }
 
+  /* Modal Overlay */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  .modal-overlay.show { display: flex; }
+
+  .account-modal {
+    background: #fff;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 420px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    position: relative;
+    animation: modalIn 0.3s ease;
+  }
+
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+  }
+
+  .close-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: var(--surface-elevated);
+    color: var(--muted);
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+
+  .close-btn:hover {
+    background: #fee2e2;
+    color: var(--brand-red);
+  }
+
+  .modal-body { padding: 24px; }
+
+  .form-field { margin-bottom: 20px; }
+  .form-field:last-child { margin-bottom: 0; }
+
+  .field-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .field-input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--surface-elevated);
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+
+  .field-input:focus {
+    outline: none;
+    border-color: var(--brand-red);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(183, 28, 28, 0.1);
+  }
+
+  .modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .logout-btn-modal {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    background: var(--brand-gradient);
+    color: #fff;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+
+  .logout-btn-modal:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(183, 28, 28, 0.3);
+  }
+
   /* Main Content */
   .main {
     display: flex;
@@ -710,7 +835,7 @@
 
       <div class="spacer"></div>
 
-      <div class="profile" onclick="window.location='{% url 'dashboard' %}'">
+      <div class="profile" id="profileTrigger">
         <div class="avatar">{{ full_name|slice:":1"|upper }}</div>
         <div class="profile-info">
           <div class="nm">{{ full_name|default:"Admin" }}</div>
@@ -827,7 +952,7 @@
 
             <div class="filter-actions">
               <button type="submit" class="btn btn-primary" style="flex: 1;">
-                Filter
+                  Filter
               </button>
               <button type="button" class="btn btn-secondary" onclick="clearFilters()">
                 Clear
@@ -1168,6 +1293,54 @@
     document.getElementById('filter-form').submit();
   };
 })();
+</script>
+
+<!-- Account Modal -->
+<div class="modal-overlay" id="accountModal">
+  <div class="account-modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Account</h3>
+      <button class="close-btn" id="closeModal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-field">
+        <label class="field-label">Full Name</label>
+        <input type="text" class="field-input" value="{{ full_name|default:'Admin User' }}" readonly>
+      </div>
+      <div class="form-field">
+        <label class="field-label">Username</label>
+        <input type="text" class="field-input" value="{{ username|default:'admin' }}" readonly>
+      </div>
+      <div class="form-field">
+        <label class="field-label">Email</label>
+        <input type="email" class="field-input" value="{{ email|default:'admin@parkit.com' }}" readonly>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <form method="post" action="{% url 'logout' %}" style="margin:0;">
+        {% csrf_token %}
+        <button type="submit" class="logout-btn-modal">Logout</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  const profileTrigger = document.getElementById('profileTrigger');
+  const accountModal = document.getElementById('accountModal');
+  const closeModal = document.getElementById('closeModal');
+
+  if (profileTrigger && accountModal) {
+    profileTrigger.addEventListener('click', () => accountModal.classList.add('show'));
+  }
+  if (closeModal && accountModal) {
+    closeModal.addEventListener('click', () => accountModal.classList.remove('show'));
+  }
+  if (accountModal) {
+    accountModal.addEventListener('click', (e) => {
+      if (e.target === accountModal) accountModal.classList.remove('show');
+    });
+  }
 </script>
 
 {% endblock %}
