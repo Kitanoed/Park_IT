@@ -3044,12 +3044,35 @@ class AdvancedReportsView(View):
             status_class = 'completed' if exit_time else 'active'
             duration = calculate_duration(entry_time, exit_time)
 
+            # Convert ISO strings to datetime objects for template rendering
+            entry_dt = None
+            exit_dt = None
+            try:
+                if entry_time:
+                    entry_clean = entry_time.replace('Z', '+00:00')
+                    entry_dt = datetime.fromisoformat(entry_clean)
+                    if entry_dt.tzinfo is None:
+                        entry_dt = entry_dt.replace(tzinfo=dt_timezone.utc)
+                    # Convert to local timezone
+                    entry_dt = timezone.localtime(entry_dt)
+            except Exception:
+                pass
+            
+            try:
+                if exit_time:
+                    exit_clean = exit_time.replace('Z', '+00:00')
+                    exit_dt = datetime.fromisoformat(exit_clean)
+                    if exit_dt.tzinfo is None:
+                        exit_dt = exit_dt.replace(tzinfo=dt_timezone.utc)
+                    # Convert to local timezone
+                    exit_dt = timezone.localtime(exit_dt)
+            except Exception:
+                pass
+
             # Track stats
-            if exit_time:
+            if exit_time and entry_dt and exit_dt:
                 completed_count += 1
                 try:
-                    entry_dt = datetime.fromisoformat(entry_time.replace('Z', '+00:00'))
-                    exit_dt = datetime.fromisoformat(exit_time.replace('Z', '+00:00'))
                     total_duration_minutes += (exit_dt - entry_dt).total_seconds() / 60
                 except Exception:
                     pass
@@ -3058,8 +3081,8 @@ class AdvancedReportsView(View):
                 'id': entry.get('id'),
                 'vehicle_plate': plate_number,
                 'lot_name': lot_name_value,
-                'entry_time': entry_time,
-                'exit_time': exit_time,
+                'entry_time': entry_dt,  # Now a datetime object
+                'exit_time': exit_dt,  # Now a datetime object (or None)
                 'duration': duration,
                 'status': status,
                 'status_class': status_class,
@@ -3082,8 +3105,12 @@ class AdvancedReportsView(View):
         
         for log in parking_logs:
             try:
-                entry_dt = datetime.fromisoformat(log['entry_time'].replace('Z', '+00:00'))
+                # entry_time is now a datetime object (or None), not a string
+                entry_dt = log.get('entry_time')
+                if not entry_dt:
+                    continue  # Skip if no entry time
                 
+                # entry_dt is already a datetime object, use it directly
                 # Monthly data
                 month_key = entry_dt.strftime('%b %Y')
                 monthly_data[month_key] += 1

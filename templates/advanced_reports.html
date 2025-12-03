@@ -1066,8 +1066,8 @@
                 <td><code style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted);">#{{ log.id }}</code></td>
                 <td><span class="plate">{{ log.vehicle_plate }}</span></td>
                 <td>{{ log.lot_name }}</td>
-                <td>{{ log.entry_time|date:"M d, Y H:i" }}</td>
-                <td>{% if log.exit_time %}{{ log.exit_time|date:"M d, Y H:i" }}{% else %}<span style="color: var(--muted);">—</span>{% endif %}</td>
+                <td>{% if log.entry_time %}{{ log.entry_time|date:"M d, Y h:i A" }}{% else %}<span style="color: var(--muted);">—</span>{% endif %}</td>
+                <td>{% if log.exit_time %}{{ log.exit_time|date:"M d, Y h:i A" }}{% else %}<span style="color: var(--muted);">—</span>{% endif %}</td>
                 <td><strong>{{ log.duration }}</strong></td>
                 <td>
                   <span class="status-badge status-{{ log.status_class }}">
