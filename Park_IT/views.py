@@ -364,7 +364,6 @@ class LoginView(View):
 def logout_view(request):
     supabase.auth.sign_out()
     request.session.flush()
-    messages.success(request, 'Logged out successfully.')
     return redirect('home')
 
 class DashboardView(View):
@@ -1278,10 +1277,10 @@ class EditUserView(View):
                 'role': normalized_role,  # Always save as lowercase
             }).eq('id', user_id).execute()
 
-            messages.success(request, 'User updated successfully.')
+            
             return redirect('manage_users')
         except Exception as e:
-            messages.error(request, f'Failed to update user: {str(e)}')
+           
             context = {
                 'role': role_name,
                 'full_name': f"{current_user['first_name']} {current_user['last_name']}",
@@ -1317,7 +1316,7 @@ def _set_user_status(request, user_id, new_status, success_message):
         return redirect('home')
 
     if role_name != 'admin':
-        messages.error(request, 'Access denied. Admins only.')
+       
         return redirect('user_dashboard')
 
     try:
