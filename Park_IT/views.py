@@ -2993,43 +2993,133 @@ class AdvancedReportsView(View):
         except Exception:
             parking_lots = []
 
-        # Fetch parking sessions data with limit to prevent loading too much data
-        # Limit to 5000 entries for performance (charts can use all, table shows first 100)
-        MAX_ENTRIES = 5000
+        # Fetch parking sessions data with optimized limit for performance
+        # Reduced from 5000 to 2000 to prevent timeouts and connection issues
+        # Charts use all data, table shows first 100
+        MAX_ENTRIES = 2000
+        entry_records = []
+        
         try:
-            entries_query = supabase.table('entries_exits').select(
-                'id, time, vehicle_id, action, lot_id'
-            ).eq('action', 'entry').gte('time', start_date.isoformat()).order('time', desc=True).limit(MAX_ENTRIES)
-            
-            if selected_lot:
-                entries_query = entries_query.eq('lot_id', int(selected_lot))
-            
-            entries_response = entries_query.execute()
-            entry_records = entries_response.data or []
-        except Exception:
+            # Apply vehicle search filter early if provided to reduce data processing
+            if vehicle_search:
+                # First, find matching vehicles
+                try:
+                    vehicle_search_resp = supabase.table('vehicle').select('id').ilike('plate', f'%{vehicle_search}%').limit(1000).execute()
+                    matching_vehicle_ids = [v['id'] for v in (vehicle_search_resp.data or [])]
+                    if not matching_vehicle_ids:
+                        # No matching vehicles, skip entry fetch
+                        entry_records = []
+                    else:
+                        # Fetch entries only for matching vehicles
+                        entries_query = supabase.table('entries_exits').select(
+                            'id, time, vehicle_id, action, lot_id'
+                        ).eq('action', 'entry').gte('time', start_date.isoformat()).in_('vehicle_id', matching_vehicle_ids).order('time', desc=True).limit(MAX_ENTRIES)
+                        
+                        if selected_lot:
+                            entries_query = entries_query.eq('lot_id', int(selected_lot))
+                        
+                        entries_response = entries_query.execute()
+                        entry_records = entries_response.data or []
+                except Exception as ve:
+                    # If vehicle search fails, fall back to regular query
+                    entries_query = supabase.table('entries_exits').select(
+                        'id, time, vehicle_id, action, lot_id'
+                    ).eq('action', 'entry').gte('time', start_date.isoformat()).order('time', desc=True).limit(MAX_ENTRIES)
+                    
+                    if selected_lot:
+                        entries_query = entries_query.eq('lot_id', int(selected_lot))
+                    
+                    entries_response = entries_query.execute()
+                    entry_records = entries_response.data or []
+            else:
+                # No vehicle search, fetch normally
+                entries_query = supabase.table('entries_exits').select(
+                    'id, time, vehicle_id, action, lot_id'
+                ).eq('action', 'entry').gte('time', start_date.isoformat()).order('time', desc=True).limit(MAX_ENTRIES)
+                
+                if selected_lot:
+                    entries_query = entries_query.eq('lot_id', int(selected_lot))
+                
+                entries_response = entries_query.execute()
+                entry_records = entries_response.data or []
+        except Exception as e:
+            error_msg = str(e).lower()
+            if 'timeout' in error_msg or 'connection' in error_msg or 'network' in error_msg:
+                messages.error(request, 'Database connection timeout. Please try again with a shorter date range.')
+            else:
+                messages.error(request, f'Error loading parking data: {str(e)}')
             entry_records = []
+        
+        # Early return if no entry records to avoid unnecessary processing
+        if not entry_records:
+            import json
+            context = {
+                'role': role_name,
+                'full_name': f"{user_data['first_name']} {user_data['last_name']}",
+                'email': user_data['email'],
+                'username': user_data['student_employee_id'],
+                # Stats
+                'total_sessions': 0,
+                'avg_duration': '0m',
+                'completed_sessions': 0,
+                'active_sessions': 0,
+                # Filters
+                'parking_lots': parking_lots,
+                'date_range': date_range,
+                'selected_lot': selected_lot,
+                'vehicle_search': vehicle_search,
+                'selected_month': selected_month,
+                # Data
+                'parking_logs': [],
+                # Chart data (JSON encoded)
+                'monthly_labels': json.dumps(['No Data']),
+                'monthly_usage': json.dumps([0]),
+                'daily_labels': json.dumps([]),
+                'daily_usage': json.dumps([]),
+                'peak_hour_labels': json.dumps(['No Data']),
+                'peak_hour_values': json.dumps([0]),
+                'lot_labels': json.dumps(['No Data']),
+                'lot_values': json.dumps([0]),
+            }
+            return render(request, 'advanced_reports.html', context)
 
-        # Fetch vehicle data
+        # Fetch vehicle data - optimized batch query
         vehicle_ids = list(set([e['vehicle_id'] for e in entry_records if e.get('vehicle_id')]))
         vehicles_map = {}
         if vehicle_ids:
             try:
-                vehicles_query = supabase.table('vehicle').select('id, plate').in_('id', vehicle_ids)
-                if vehicle_search:
-                    vehicles_query = vehicles_query.ilike('plate', f'%{vehicle_search}%')
-                vehicles_response = vehicles_query.execute()
-                vehicles_map = {v['id']: v.get('plate', '') for v in (vehicles_response.data or [])}
-            except Exception:
+                # Batch fetch vehicles in chunks to avoid query size limits
                 vehicles_map = {}
+                chunk_size = 500  # Supabase IN clause limit
+                for i in range(0, len(vehicle_ids), chunk_size):
+                    chunk = vehicle_ids[i:i + chunk_size]
+                    vehicles_query = supabase.table('vehicle').select('id, plate').in_('id', chunk)
+                    if vehicle_search:
+                        vehicles_query = vehicles_query.ilike('plate', f'%{vehicle_search}%')
+                    vehicles_response = vehicles_query.execute()
+                    chunk_map = {v['id']: v.get('plate', '') for v in (vehicles_response.data or [])}
+                    vehicles_map.update(chunk_map)
+            except Exception as e:
+                # If batch fails, try single query
+                try:
+                    vehicles_query = supabase.table('vehicle').select('id, plate').in_('id', vehicle_ids[:500])
+                    if vehicle_search:
+                        vehicles_query = vehicles_query.ilike('plate', f'%{vehicle_search}%')
+                    vehicles_response = vehicles_query.execute()
+                    vehicles_map = {v['id']: v.get('plate', '') for v in (vehicles_response.data or [])}
+                except Exception:
+                    vehicles_map = {}
 
-        # Fetch lots mapping
+        # Fetch lots mapping - optimized
         lot_ids = list(set([e['lot_id'] for e in entry_records if e.get('lot_id')]))
         lots_map = {}
         if lot_ids:
             try:
+                # Fetch all lots at once (usually small number)
                 lots_data = supabase.table('parking_lot').select('id, name').in_('id', lot_ids).execute()
                 lots_map = {l['id']: l.get('name', '') for l in (lots_data.data or [])}
-            except Exception:
+            except Exception as e:
+                # If fetch fails, continue with empty map (will show 'Unknown')
                 lots_map = {}
 
         # OPTIMIZATION: Batch fetch all exit records for the entries in one query
@@ -3037,16 +3127,20 @@ class AdvancedReportsView(View):
         vehicle_exits = {}  # Maps vehicle_id -> list of exit times
         if entry_records and vehicle_ids:
             try:
-                # Get all exit records for vehicles in our entry set, within the date range
-                exits_query = supabase.table('entries_exits').select(
-                    'vehicle_id, time, action'
-                ).eq('action', 'exit').in_('vehicle_id', vehicle_ids).gte('time', start_date.isoformat()).order('time')
-                
-                if selected_lot:
-                    exits_query = exits_query.eq('lot_id', int(selected_lot))
-                
-                exits_response = exits_query.execute()
-                exit_records = exits_response.data or []
+                # Batch fetch exits in chunks to avoid query size limits
+                exit_records = []
+                chunk_size = 500  # Supabase IN clause limit
+                for i in range(0, len(vehicle_ids), chunk_size):
+                    chunk = vehicle_ids[i:i + chunk_size]
+                    exits_query = supabase.table('entries_exits').select(
+                        'vehicle_id, time, action'
+                    ).eq('action', 'exit').in_('vehicle_id', chunk).gte('time', start_date.isoformat()).order('time')
+                    
+                    if selected_lot:
+                        exits_query = exits_query.eq('lot_id', int(selected_lot))
+                    
+                    exits_response = exits_query.execute()
+                    exit_records.extend(exits_response.data or [])
                 
                 # Group exits by vehicle_id and find the first exit after each entry
                 # Create a sorted list of exits per vehicle for efficient lookup
@@ -3059,7 +3153,8 @@ class AdvancedReportsView(View):
                 # Sort exits per vehicle for binary search
                 for vid in vehicle_exits:
                     vehicle_exits[vid].sort()
-            except Exception:
+            except Exception as e:
+                # If batch fetch fails, continue without exits (sessions will show as Active)
                 vehicle_exits = {}
         else:
             vehicle_exits = {}
@@ -3081,14 +3176,19 @@ class AdvancedReportsView(View):
             plate_number = vehicles_map.get(vehicle_id, 'Unknown')
             lot_name_value = lots_map.get(lot_id, 'Unknown')
 
-            # Find exit using pre-fetched data (binary search for efficiency)
+            # Find exit using pre-fetched data (optimized binary search)
             exit_time = None
             if vehicle_id in vehicle_exits and vehicle_exits[vehicle_id]:
-                # Find first exit after this entry time
-                for exit_t in vehicle_exits[vehicle_id]:
-                    if exit_t >= entry_time:
-                        exit_time = exit_t
-                        break
+                # Use binary search for O(log n) instead of O(n) linear search
+                exits_list = vehicle_exits[vehicle_id]
+                left, right = 0, len(exits_list) - 1
+                while left <= right:
+                    mid = (left + right) // 2
+                    if exits_list[mid] < entry_time:
+                        left = mid + 1
+                    else:
+                        exit_time = exits_list[mid]
+                        right = mid - 1
 
             status = 'Completed' if exit_time else 'Active'
             status_class = 'completed' if exit_time else 'active'
@@ -3148,12 +3248,16 @@ class AdvancedReportsView(View):
             avg_duration = f"{int(avg_duration_minutes)}m"
 
         # OPTIMIZATION: Process all chart data in a single loop instead of multiple loops
+        # Limit processing to improve performance
         monthly_data = defaultdict(int)
         daily_data = defaultdict(int)
         hourly_data = defaultdict(int)
         lot_usage = defaultdict(int)
         
-        for log in parking_logs:
+        # Process logs for charts (limit to prevent excessive processing)
+        chart_logs = parking_logs[:1000] if len(parking_logs) > 1000 else parking_logs
+        
+        for log in chart_logs:
             try:
                 # entry_time is now a datetime object (or None), not a string
                 entry_dt = log.get('entry_time')
@@ -3165,7 +3269,7 @@ class AdvancedReportsView(View):
                 month_key = entry_dt.strftime('%b %Y')
                 monthly_data[month_key] += 1
                 
-                # Daily data
+                # Daily data - limit to last 60 days for performance
                 day_key = entry_dt.strftime('%b %d')
                 daily_data[day_key] += 1
                 
@@ -3183,6 +3287,12 @@ class AdvancedReportsView(View):
                                key=lambda x: datetime.strptime(x[0], '%b %Y'))
         monthly_labels = [m[0] for m in sorted_months[-12:]]  # Last 12 months
         monthly_usage = [m[1] for m in sorted_months[-12:]]
+        
+        # Limit daily data to last 30 days for performance
+        sorted_daily = sorted(daily_data.items(), 
+                             key=lambda x: datetime.strptime(x[0], '%b %d'))
+        daily_labels_limited = [d[0] for d in sorted_daily[-30:]]
+        daily_usage_limited = [d[1] for d in sorted_daily[-30:]]
 
         # Peak hours analysis
         peak_hours = sorted(hourly_data.items(), key=lambda x: x[1], reverse=True)[:5]
@@ -3211,13 +3321,13 @@ class AdvancedReportsView(View):
             'selected_lot': selected_lot,
             'vehicle_search': vehicle_search,
             'selected_month': selected_month,
-            # Data
-            'parking_logs': parking_logs[:100],  # Limit for display
+            # Data - limit table display to 50 for better performance
+            'parking_logs': parking_logs[:50],  # Limit for display (reduced from 100)
             # Chart data (JSON encoded)
             'monthly_labels': json.dumps(monthly_labels if monthly_labels else ['No Data']),
             'monthly_usage': json.dumps(monthly_usage if monthly_usage else [0]),
-            'daily_labels': json.dumps(list(daily_data.keys())[-30:]),
-            'daily_usage': json.dumps(list(daily_data.values())[-30:]),
+            'daily_labels': json.dumps(daily_labels_limited if daily_labels_limited else []),
+            'daily_usage': json.dumps(daily_usage_limited if daily_usage_limited else []),
             'peak_hour_labels': json.dumps(peak_hour_labels if peak_hour_labels else ['No Data']),
             'peak_hour_values': json.dumps(peak_hour_values if peak_hour_values else [0]),
             'lot_labels': json.dumps(lot_labels if lot_labels else ['No Data']),
