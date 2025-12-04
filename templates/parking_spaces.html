@@ -763,6 +763,40 @@
   </div>
 </div>
 
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" id="deleteConfirmModal">
+  <div class="account-modal" style="max-width: 480px;">
+    <div class="modal-header">
+      <h3 class="modal-title" style="color: #dc2626;">
+        <i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>
+        Confirm Deletion
+      </h3>
+      <button class="close-btn" id="closeDeleteModal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="text-align: center; padding: 20px 0;">
+        <div style="width: 64px; height: 64px; margin: 0 auto 20px; border-radius: 50%; background: #fee2e2; display: flex; align-items: center; justify-content: center;">
+          <i class="fas fa-trash" style="font-size: 32px; color: #dc2626;"></i>
+        </div>
+        <h4 style="margin: 0 0 12px; color: var(--text); font-size: 18px;">Delete Slot Permanently?</h4>
+        <p style="margin: 0 0 8px; color: var(--muted); font-size: 14px; line-height: 1.6;">
+          You are about to permanently delete <strong id="deleteSlotNumber" style="color: var(--text);">Slot X</strong>.
+        </p>
+        <p style="margin: 0; color: #dc2626; font-size: 13px; font-weight: 600;">
+          ⚠️ This action cannot be undone!
+        </p>
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content: center; gap: 12px;">
+      <button class="btn-save" id="cancelDeleteBtn" style="background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 12px 24px;">Cancel</button>
+      <button class="btn-save" id="confirmDeleteBtn" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); padding: 12px 24px;">
+        <i class="fas fa-trash" style="margin-right: 6px;"></i>
+        Delete Permanently
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="notification-container" id="notificationContainer"></div>
 
 <div style="display:none;">{% csrf_token %}</div>
@@ -999,16 +1033,55 @@
       .catch(() => showNotification('Error refreshing', 'error'));
   });
 
-  // Delete Slot
+  // Delete Slot Confirmation Modal
+  const deleteConfirmModal = document.getElementById('deleteConfirmModal');
+  const closeDeleteModal = document.getElementById('closeDeleteModal');
+  const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+  const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+  const deleteSlotNumber = document.getElementById('deleteSlotNumber');
+  
+  let slotToDelete = null;
+  
+  // Open delete confirmation modal
   document.getElementById('deleteSlotBtn').addEventListener('click', () => {
     if (!activeSlot) return;
     
     const slotId = activeSlot.dataset.slotId;
-    const slotNumber = document.getElementById('slotNumber').textContent;
+    const slotNumber = activeSlot.dataset.slotNumber;
     
-    if (!confirm(`Are you sure you want to PERMANENTLY DELETE Slot ${slotNumber}?\n\nThis action cannot be undone.`)) {
-      return;
+    slotToDelete = { id: slotId, number: slotNumber };
+    deleteSlotNumber.textContent = `Slot ${slotNumber}`;
+    deleteConfirmModal.classList.add('show');
+  });
+  
+  // Close delete modal
+  closeDeleteModal.addEventListener('click', () => {
+    deleteConfirmModal.classList.remove('show');
+    slotToDelete = null;
+  });
+  
+  cancelDeleteBtn.addEventListener('click', () => {
+    deleteConfirmModal.classList.remove('show');
+    slotToDelete = null;
+  });
+  
+  deleteConfirmModal.addEventListener('click', (e) => {
+    if (e.target === deleteConfirmModal) {
+      deleteConfirmModal.classList.remove('show');
+      slotToDelete = null;
     }
+  });
+  
+  // Confirm deletion
+  confirmDeleteBtn.addEventListener('click', () => {
+    if (!slotToDelete) return;
+    
+    const slotId = slotToDelete.id;
+    const slotNumber = slotToDelete.number;
+    
+    // Disable button during deletion
+    confirmDeleteBtn.disabled = true;
+    confirmDeleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right: 6px;"></i>Deleting...';
     
     fetch(`/api/parking-slots/${slotId}/delete/`, {
       method: 'POST',
@@ -1020,7 +1093,8 @@
     .then(r => r.json())
     .then(data => {
       if (data.success) {
-        showNotification(data.message || 'Slot deleted successfully', 'success');
+        showNotification(data.message || `Slot ${slotNumber} deleted successfully`, 'success');
+        deleteConfirmModal.classList.remove('show');
         slotModal.classList.remove('show');
         // Remove the slot from the grid
         if (activeSlot) {
@@ -1030,9 +1104,15 @@
         setTimeout(() => location.reload(), 1500);
       } else {
         showNotification(data.error || 'Failed to delete slot', 'error');
+        confirmDeleteBtn.disabled = false;
+        confirmDeleteBtn.innerHTML = '<i class="fas fa-trash" style="margin-right: 6px;"></i>Delete Permanently';
       }
     })
-    .catch(e => showNotification(e.message || 'Error deleting slot', 'error'));
+    .catch(e => {
+      showNotification(e.message || 'Error deleting slot', 'error');
+      confirmDeleteBtn.disabled = false;
+      confirmDeleteBtn.innerHTML = '<i class="fas fa-trash" style="margin-right: 6px;"></i>Delete Permanently';
+    });
   });
 </script>
 {% endblock %}

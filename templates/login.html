@@ -285,7 +285,9 @@
     {% if messages %}
     <ul class="messagelist">
       {% for message in messages %}
-      <li class="{{ message.tags }}">{{ message }}</li>
+        {% if message.message != "Login successful!" and message.message != "Logged out successfully." %}
+        <li class="{{ message.tags }}">{{ message }}</li>
+        {% endif %}
       {% endfor %}
     </ul>
     {% endif %}

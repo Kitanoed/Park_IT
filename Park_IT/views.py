@@ -2880,6 +2880,7 @@ def get_slot_details(request, slot_id):
 
 
 @require_POST
+@require_POST
 def delete_parking_slot(request, slot_id):
     """
     API Endpoint: Permanently delete a parking slot from the database
