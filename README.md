@@ -1,61 +1,120 @@
 # ParkIT
 
-**Course**: IT317-G1 CSIT327-G7
+**ParkIT** is a web-based parking management system for Cebu Institute of Technology–University (CIT-U). It helps campus staff monitor parking availability, record vehicle entry and exit, and manage parking operations through role-based administrator and attendant interfaces.
 
-**Title**: CIT-U Car Parking Management System
+## Overview
 
+ParkIT replaces manual parking workflows with a shared system for viewing lot occupancy and maintaining parking activity records. Administrators can manage users, parking spaces, and reports, while attendants can use the operational dashboard to support day-to-day parking activity.
 
-## Executive Summary
-ParkIT! is a web-based Car Parking Management System designed to improve the 
-efficiency of parking operations within Cebu Institute of Technology – University (CIT-U). 
-The system provides real-time monitoring of available and occupied slots, structured 
-vehicle entry/exit logging, and role-based user management for administrators and 
-attendants. Unlike manual or sticker-based methods, it offers transparency, accessibility, 
-and reliable record-keeping to reduce congestion and wasted time in the campus 
-parking areas.
+## Features
 
-## Tech Stack
-backend: Django (Python)
-Database: Supabase
-Frontend: Django Templates + HTML + CSS
-Deployment: Render (backend + Frontend), Supabase(database)
+- Parking lot and space availability views
+- Vehicle check-in and check-out tracking
+- Administrator and attendant dashboards
+- User management, account status controls, and password reset flows
+- Parking history with filtering and pagination
+- Reports, including CSV export and monthly summaries
+- Profile and password management
 
-# Environment Setup
-**1. Create a .env File**
+## Technology
 
-In the project root directory (same level as `manage.py`), create a file named `.env`.
+- **Backend:** Python 3.11, Django 5.2
+- **Frontend:** Django templates, HTML, CSS, and JavaScript
+- **Data services:** Supabase; SQLite is used as the local database fallback
+- **Production server:** Gunicorn
+- **Deployment:** Render
 
-**2. Add Supabase Credentials**
+## Prerequisites
 
-Insert your Supabase credentials inside `.env`:
+- Python 3.11
+- pip
+- A Supabase project and its project URL and API key
 
-### env
-SUPABASE_URL=your-supabase-url
-SUPABASE_KEY=your-supabase-anon-or-service-key
+## Local Development
 
-**3. Install Python Dependencies**
+1. Clone the repository and enter the project directory:
 
-**Activate virtual environment (Windows):**
+   ```bash
+   git clone https://github.com/Kitanoed/Park_IT.git
+   cd Park_IT
+   ```
 
-`venv\Scripts\activate`
+2. Create and activate a virtual environment:
 
-**Install requirements:**
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate
+   ```
 
-`pip install -r requirements.txt`
+   On Windows PowerShell, activate it with:
 
-**4. Run Local Server**
+   ```powershell
+   .venv\Scripts\Activate.ps1
+   ```
 
-`python manage.py runserver`
+3. Install the project dependencies:
 
-# Team Members
-**Ramirez, Ruther Gerard** - Product Owner - [ruthergerard.ramirez@cit.edu]()
+   ```bash
+   python -m pip install -r requirements.txt
+   ```
 
-**Pacio, Muriel** - Business Analyst - [muriel.pacio@cit.edu]()
+4. Create a `.env` file in the repository root and add your Supabase configuration:
 
-**Panonce, Herlanz Mirby** - Scrum Master - [herlanzmirby.panonce@cit.edu]()
+   ```dotenv
+   SUPABASE_URL=https://your-project-id.supabase.co
+   SUPABASE_ANON_KEY=your-supabase-anon-key
+   ```
 
-**Lawas, Berchard Lawrence** - Lead Developer - [berchardlawrence.lawas@cit.edu]()
+   The application also accepts `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_KEY` as the Supabase key. Keep all credentials private; do not commit real secrets to the repository.
 
-**Loy, Andrei Sam** - Back-end Developer - [andreisam.loy@cit.edu]()
+5. Apply Django migrations and start the development server:
 
-**Lo, Joshua Noel** - Front-end Developer - [joshuanoel.lo@cit.edu]()
+   ```bash
+   python manage.py migrate
+   python manage.py runserver
+   ```
+
+   Open <http://127.0.0.1:8000/> in your browser.
+
+## Tests
+
+Run the Django test suite with:
+
+```bash
+python manage.py test
+```
+
+## Deployment
+
+The repository includes a `Procfile` configured to run the Django application with Gunicorn:
+
+```text
+web: gunicorn Park_IT.wsgi
+```
+
+For a Render deployment, configure the required Supabase environment variables in the service settings. When using a hosted Django database, configure `DATABASE_URL` as well. Never place production credentials in source control.
+
+## Project Structure
+
+```text
+Park_IT/                    # Django project configuration, routes, views, and forms
+  settings.py
+  urls.py
+  views.py
+  models.py
+templates/                  # Django HTML templates
+static/                     # Static assets
+utils/                      # Supabase client and shared utilities
+manage.py                   # Django management commands
+requirements.txt            # Python dependencies
+Procfile                    # Production web process
+PARKING_HISTORY_API_SPEC.md # Parking history API specification
+```
+
+## API Reference
+
+The administrator parking-history API and its query parameters are documented in [PARKING_HISTORY_API_SPEC.md](PARKING_HISTORY_API_SPEC.md).
+
+## License
+
+No license is currently specified for this repository. Contact the project owner for permission before redistribution or other reuse.
